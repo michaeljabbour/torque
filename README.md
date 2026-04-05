@@ -192,10 +192,34 @@ torque ai "<prompt>"                           # AI assistant with full context
 torque list [behaviors|agents|recipes|skills]  # Browse foundation resources
 torque recipe execute <name>                   # Run a multi-step workflow
 torque update                                  # Pull latest across repos
+torque deploy [--plan production]                  # Build & deploy to configured server
 torque clean [--deps|--data|--all]             # Remove artifacts
 ```
 
 See [torque-cli](https://github.com/torque-framework/torque-cli) for full command documentation.
+
+## Deployment
+
+Deploy to any VPS with Docker:
+
+```bash
+torque deploy
+```
+
+This builds a Docker image, transfers it to your server via SSH, and starts the container. Configure in `config/deploy.yml`:
+
+```yaml
+server: 203.0.113.10
+user: deploy
+port: 9292
+env:
+  AUTH_SECRET: ${AUTH_SECRET}
+  NODE_ENV: production
+```
+
+By default, `torque deploy` uses `docker save | ssh docker load` — no registry needed. Add `registry: ghcr.io/your-org` to use push/pull instead.
+
+The generated `Dockerfile` mounts `/app/data` as a volume so your SQLite database persists across deploys.
 
 ## Updating
 

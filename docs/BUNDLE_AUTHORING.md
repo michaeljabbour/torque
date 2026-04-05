@@ -281,6 +281,46 @@ Auth policy convention:
 
 Every route declared here must have a matching handler in `routes()`. The kernel checks this at boot.
 
+#### Route Validation
+
+Declare input validation rules directly in your route definitions. The server auto-generates Express middleware that validates requests before they reach your handler, returning 422 with structured errors on failure.
+
+```yaml
+api:
+  routes:
+    - method: POST
+      path: /api/tasks
+      handler: createTask
+      auth: true
+      validate:
+        body:
+          title: { type: string, required: true, min_length: 1, max_length: 500 }
+          priority: { type: string, enum: [low, normal, high, urgent] }
+          due_date: { type: string }
+          entity_type: { type: string }
+          entity_id: { type: uuid }
+        params:
+          id: { type: uuid, required: true }
+```
+
+**Supported validation rules:**
+
+| Rule | Type | Example |
+|------|------|---------|
+| `required` | boolean | `{ required: true }` |
+| `type` | string | `string`, `integer`, `float`, `boolean`, `uuid` |
+| `min_length` / `max_length` | number | String length bounds |
+| `min` / `max` | number | Numeric bounds |
+| `pattern` | string | `"email"` or a regex pattern |
+| `enum` | array | `[open, closed, archived]` |
+
+When validation fails, the server returns:
+```json
+{ "error": "Validation failed", "errors": [{ "field": "title", "rule": "required", "message": "title is required" }] }
+```
+
+**Best practice:** Put field presence and type checks in the manifest `validate:` block. Keep business logic validation (e.g., "end date must be after start date") in your route handler.
+
 #### `ui`
 
 ```yaml
@@ -761,6 +801,15 @@ The test pattern:
 3. Assert on return values AND published events
 4. Test validation edge cases (empty strings, missing fields)
 5. Test interfaces return the right data
+
+#### Data Layer Validation
+
+You can also validate at the data layer to catch bugs in seeds, migrations, and coordinator calls that bypass HTTP routes:
+
+```js
+this.data.insert('tasks', record, { validate: true });
+// Throws ValidationError if record violates manifest column constraints (null, type)
+```
 
 ---
 

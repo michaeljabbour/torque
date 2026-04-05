@@ -85,6 +85,19 @@ Full-stack application bundles that combine multiple features into a single inst
 |-----|--------|-------------|
 | `@torquedev/app-todo` | [torque-app-todo](https://github.com/torque-framework/torque-app-todo) | Reference todo-list app demonstrating the full framework lifecycle |
 
+## CLI Templates
+
+Available via `torque new --template <name>`:
+
+| Template | Bundles | Description |
+|----------|---------|-------------|
+| `minimal` | identity | Simplest possible app — authentication only |
+| `standard` | identity, pipeline, pulse, tasks | Deal-tracking app with full business logic |
+| `kanban` | iam, kanban-app, activity-app, search-app | Full kanban board with real-time collaboration |
+| `api-only` | identity, pipeline, tasks | Headless API server — no shell/UI |
+
+Default: `standard`. All templates include a `Dockerfile`, `deploy.yml`, and `.env.example`.
+
 ---
 
 ## Using bundles in your mount plan
