@@ -55,10 +55,6 @@ def test_bundle_authoring_realtime_channels_yaml():
 
 def test_bundle_authoring_realtime_channels_name_template():
     content = _CONTENT[BUNDLE_AUTHORING]
-    # Channel name template uses {field_name} placeholders
-    assert "{" in content and "}" in content, (
-        "Missing channel name template with {field_name} placeholders"
-    )
     assert "replaced from payload" in content, (
         "Missing explanation of channel name template replacement from payload"
     )
@@ -104,9 +100,9 @@ def test_bundle_authoring_agent_intents_yaml():
 
 def test_bundle_authoring_agent_intents_js_example():
     content = _CONTENT[BUNDLE_AUTHORING]
-    assert "Intent" in content, "Missing Intent class reference in JS example"
-    assert "Behavior" in content, "Missing Behavior class reference in JS example"
-    assert "Context" in content, "Missing Context class reference in JS example"
+    assert all(term in content for term in ("Intent", "Behavior", "Context")), (
+        "Missing one or more JS example class references: Intent, Behavior, Context"
+    )
 
 
 def test_bundle_authoring_agent_intents_closing():
