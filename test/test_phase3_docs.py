@@ -7,26 +7,7 @@ have been updated with all Phase 3 deliverables.
 Run with: pytest torque/test/test_phase3_docs.py
 """
 
-import re
-from pathlib import Path
-
-# File paths relative to repo root
-REPO = Path(__file__).parent.parent
-BUNDLE_AUTHORING = REPO / "docs" / "BUNDLE_AUTHORING.md"
-REGISTRY = REPO / "REGISTRY.md"
-README = REPO / "README.md"
-
-# Read each file once at module load; all tests share these cached strings.
-_CONTENT: dict[Path, str] = {
-    BUNDLE_AUTHORING: BUNDLE_AUTHORING.read_text(),
-    REGISTRY: REGISTRY.read_text(),
-    README: README.read_text(),
-}
-
-
-def count_code_fences(content: str) -> int:
-    """Count occurrences of triple backticks in content."""
-    return len(re.findall(r"```", content))
+from doc_helpers import BUNDLE_AUTHORING, README, REGISTRY, _CONTENT, count_code_fences
 
 
 # ─────────────────────────────────────────────────────────────────────────────

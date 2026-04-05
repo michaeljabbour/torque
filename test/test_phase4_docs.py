@@ -11,26 +11,7 @@ have been updated with all task-8 deliverables:
 Run with: pytest torque/test/test_phase4_docs.py
 """
 
-import re
-from pathlib import Path
-
-# File paths relative to the torque repo root
-REPO = Path(__file__).parent.parent
-BUNDLE_AUTHORING = REPO / "docs" / "BUNDLE_AUTHORING.md"
-REGISTRY = REPO / "REGISTRY.md"
-README = REPO / "README.md"
-
-# Read each file once at module load; all tests share these cached strings.
-_CONTENT: dict[Path, str] = {
-    BUNDLE_AUTHORING: BUNDLE_AUTHORING.read_text(),
-    REGISTRY: REGISTRY.read_text(),
-    README: README.read_text(),
-}
-
-
-def count_code_fences(content: str) -> int:
-    """Count occurrences of triple backticks in content."""
-    return len(re.findall(r"```", content))
+from doc_helpers import BUNDLE_AUTHORING, README, REGISTRY, _CONTENT
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -107,8 +88,8 @@ def test_bundle_authoring_hot_reload_limitations():
 
 def test_bundle_authoring_hot_reload_dev_only():
     content = _CONTENT[BUNDLE_AUTHORING]
-    assert "Development only" in content or "development" in content.lower(), (
-        "Missing dev-only limitation in Hot Reload section"
+    assert "Development only" in content, (
+        "Missing 'Development only' limitation in Hot Reload section"
     )
 
 
@@ -122,7 +103,7 @@ def test_bundle_authoring_hot_reload_websocket_format():
 def test_bundle_authoring_hot_reload_websocket_json_fields():
     content = _CONTENT[BUNDLE_AUTHORING]
     # The JSON block should document type, bundle, and timestamp fields
-    assert '"type"' in content or '"bundle"' in content, (
+    assert '"type"' in content and '"bundle"' in content, (
         "Missing WebSocket notification JSON fields (type, bundle, timestamp)"
     )
     assert '"timestamp"' in content, (
