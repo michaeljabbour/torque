@@ -321,6 +321,204 @@ When validation fails, the server returns:
 
 **Best practice:** Put field presence and type checks in the manifest `validate:` block. Keep business logic validation (e.g., "end date must be after start date") in your route handler.
 
+---
+
+## Query Operators
+
+The data layer's `query()` method accepts filter objects with operator syntax for complex conditions.
+
+### Basic equality
+
+```js
+// Simple equality (default)
+this.data.query('tasks', { status: 'open' });
+
+// Explicit equality operator
+this.data.query('tasks', { status: { $eq: 'open' } });
+```
+
+### Comparison operators
+
+```js
+// Not equal
+this.data.query('tasks', { priority: { $ne: 'low' } });
+
+// Less than
+this.data.query('tasks', { score: { $lt: 50 } });
+
+// Greater than or equal
+this.data.query('tasks', { due_date: { $gte: '2024-01-01' } });
+
+// Less than or equal
+this.data.query('tasks', { due_date: { $lte: '2024-12-31' } });
+```
+
+### Set operator
+
+```js
+// Match any value in a set
+this.data.query('tasks', { status: { $in: ['open', 'in_progress'] } });
+```
+
+### Pattern matching
+
+```js
+// LIKE pattern (% is wildcard)
+this.data.query('tasks', { title: { $like: '%invoice%' } });
+```
+
+### Null checks
+
+```js
+// IS NULL
+this.data.query('tasks', { assigned_to: { $isNull: true } });
+
+// IS NOT NULL
+this.data.query('tasks', { completed_at: { $notNull: true } });
+```
+
+### All 10 operators
+
+| Operator | SQL Equivalent | Example |
+|----------|---------------|---------|
+| `$eq` | `= value` | `{ status: { $eq: 'open' } }` |
+| `$ne` | `!= value` | `{ priority: { $ne: 'low' } }` |
+| `$lt` | `< value` | `{ score: { $lt: 50 } }` |
+| `$lte` | `<= value` | `{ score: { $lte: 100 } }` |
+| `$gt` | `> value` | `{ score: { $gt: 0 } }` |
+| `$gte` | `>= value` | `{ due_date: { $gte: '2024-01-01' } }` |
+| `$in` | `IN (...)` | `{ status: { $in: ['open', 'done'] } }` |
+| `$like` | `LIKE pattern` | `{ title: { $like: '%task%' } }` |
+| `$isNull` | `IS NULL` | `{ assigned_to: { $isNull: true } }` |
+| `$notNull` | `IS NOT NULL` | `{ completed_at: { $notNull: true } }` |
+
+### Aggregation
+
+```js
+// Count all rows
+const total = this.data.aggregate('tasks', { count: '*' });
+
+// Sum with groupBy
+const byStatus = this.data.aggregate('tasks', {
+  sum: 'amount',
+  groupBy: 'status',
+});
+
+// avg, min, max
+const stats = this.data.aggregate('invoices', {
+  avg: 'amount',
+  min: 'amount',
+  max: 'amount',
+});
+
+// Filtered aggregation
+const openCount = this.data.aggregate('tasks', {
+  count: '*',
+  where: { status: 'open', assigned_to: userId },
+});
+```
+
+### Raw SQL
+
+When operators aren't enough, use raw SQL with parameterized values:
+
+```js
+const results = this.data.raw(
+  'SELECT * FROM tasks_tasks WHERE status = ? AND due_date < ?',
+  ['open', cutoffDate],
+);
+```
+
+> **Note on table prefixing:** Raw SQL must use the fully-qualified table name format `<bundle>_<table>` (e.g., `tasks_tasks`, `identity_users`). The data layer adds this prefix automatically for `query()`, `insert()`, etc., but raw SQL bypasses that.
+
+---
+
+## Middleware
+
+Mount plans support a `middleware:` block to configure HTTP middleware applied to all routes before they reach bundle handlers.
+
+```yaml
+app:
+  name: "my-app"
+
+middleware:
+  request_id: true          # Attach X-Request-ID header (defaults ON)
+  request_logging:
+    enabled: true
+    format: combined        # combined | tiny | dev
+  compression:
+    enabled: true
+    threshold: 1024         # Only compress responses > 1 KB
+  rate_limit:
+    enabled: true
+    window_ms: 60000        # 1 minute window
+    max_requests: 100       # Max requests per IP per window
+
+bundles:
+  identity:
+    source: "git+https://..."
+```
+
+**`request_id`** defaults ON even if omitted. Every request gets a unique `X-Request-ID` header (generated if not sent by the client), available in bundle handlers via `ctx.requestId`.
+
+**`request_logging`** logs each request with method, path, status, and duration. Formats follow morgan conventions.
+
+**`compression`** gzip-compresses responses above the threshold byte size.
+
+**`rate_limit`** returns HTTP 429 when a client exceeds `max_requests` in the time window.
+
+---
+
+## Migration Workflow
+
+When your bundle's schema evolves, use the migration system to apply changes safely.
+
+### CLI commands
+
+```bash
+# Generate a new migration file
+torque migrate generate add-priority-to-tasks
+
+# Preview the SQL that would run (dry run)
+torque migrate preview
+
+# Run pending migrations
+torque migrate run
+
+# Show migration status (applied / pending)
+torque migrate status
+
+# Roll back the last applied migration
+torque migrate rollback
+```
+
+### Type change detection
+
+SQLite does not support `ALTER COLUMN`. When the migration system detects a column type change, it uses a **table-rebuild pattern**: create a new table with the updated schema, copy data, drop the old table, and rename. This is handled automatically when you change a column type in your manifest — but be aware it rewrites the table, so test on a copy of production data before running.
+
+### Migration file format
+
+Generated migration files live in `bundles/<name>/migrations/` and export `up()` and `down()`:
+
+```js
+// bundles/tasks/migrations/20240315_add_priority_to_tasks.js
+export async function up(db) {
+  await db.exec(`
+    ALTER TABLE tasks_tasks ADD COLUMN priority TEXT DEFAULT 'normal';
+  `);
+}
+
+export async function down(db) {
+  // SQLite doesn't support DROP COLUMN directly; use table-rebuild if needed
+  // For simple additions that can be reverted by dropping, document the inverse
+  throw new Error('Cannot drop column in SQLite without table rebuild');
+}
+```
+
+The migration runner tracks applied migrations in a `_migrations` table so each migration runs exactly once. Always implement `down()` even if it throws — it documents the intended rollback intent.
+
+---
+
 #### `ui`
 
 ```yaml

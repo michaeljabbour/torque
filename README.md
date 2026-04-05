@@ -221,6 +221,25 @@ By default, `torque deploy` uses `docker save | ssh docker load` — no registry
 
 The generated `Dockerfile` mounts `/app/data` as a volume so your SQLite database persists across deploys.
 
+## API Documentation
+
+Torque auto-generates API documentation from your bundle manifests.
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /openapi.json` | Machine-readable OpenAPI 3.0 spec covering all mounted bundle routes |
+| `GET /api/docs` | Interactive Swagger UI (requires `swagger-ui-dist` in your project) |
+
+Both are generated at boot from the `api.routes` and `validate:` blocks declared in each bundle's manifest. No manual spec maintenance required.
+
+To enable the Swagger UI:
+
+```bash
+npm install swagger-ui-dist
+```
+
+Then visit `http://localhost:9292/api/docs` after starting the server.
+
 ## Updating
 
 Pull latest across all repos:

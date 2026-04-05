@@ -98,6 +98,18 @@ Available via `torque new --template <name>`:
 
 Default: `standard`. All templates include a `Dockerfile`, `deploy.yml`, and `.env.example`.
 
+## TypeScript Support
+
+All `@torquedev/*` packages include `.d.ts` declaration files. No separate `@types/` packages are needed — TypeScript support is bundled with every package.
+
+| Package | Key Types |
+|---------|-----------|
+| `@torquedev/core` | `Registry`, `ScopedCoordinator`, `HookBus`, `boot()` |
+| `@torquedev/datalayer` | `DataLayer`, `BundleScopedData`, `ValidationError` |
+| `@torquedev/eventbus` | `EventBus` |
+| `@torquedev/schema` | `createTypeValidator`, `validators`, `validateRequired` |
+| `@torquedev/server` | `createServer`, `RouteContext` |
+
 ---
 
 ## Using bundles in your mount plan
