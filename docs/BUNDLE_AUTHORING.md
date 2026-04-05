@@ -321,6 +321,85 @@ When validation fails, the server returns:
 
 **Best practice:** Put field presence and type checks in the manifest `validate:` block. Keep business logic validation (e.g., "end date must be after start date") in your route handler.
 
+### Realtime Channels
+
+Declare WebSocket channels in your manifest to enable real-time push:
+
+```yaml
+realtime:
+  channels:
+    - name: "tasks/{task_id}"
+      events:
+        - tasks.task.created
+        - tasks.task.updated
+        - tasks.task.completed
+      auth: identity.canViewTask
+
+    - name: "workspace/{workspace_id}/activity"
+      events:
+        - "*"
+```
+
+**Channel name template:** `{field_name}` placeholders are replaced from payload fields when a message is broadcast. For example, `tasks/{task_id}` becomes `tasks/abc-123` when the event payload contains `task_id: "abc-123"`.
+
+**Event patterns:** Use `"*"` as a wildcard to broadcast all events published by any subscribed bundle to the channel. Specific event names limit broadcast to matching events only.
+
+**Auth:** Optional. Provide an interface reference in the form `bundle.methodName`. The kernel calls that interface with the current user and channel params; it must return `true/false`. Omit `auth` for public channels.
+
+No code needed in your bundle — declare channels, emit events as usual, the kernel handles broadcast.
+
+### Agent Intents
+
+Define intents in your bundle for LLM-driven execution:
+
+```yaml
+intents:
+  - name: triage_tasks
+    description: "Analyze and prioritize open tasks by urgency and impact"
+  - name: summarize_overdue
+    description: "Produce a summary of all overdue tasks for the current user"
+```
+
+Implement an `intents()` method in `logic.js` that returns an array of `Intent` objects:
+
+```js
+import { Intent, Behavior, Context } from '@torquedev/core';
+
+intents() {
+  return [
+    new Intent({
+      name: 'TriageTasks',
+      context: new Context({
+        fields: ['title', 'priority', 'due_date', 'status', 'assigned_to'],
+        vectorize: ['title'],
+      }),
+      behavior: new Behavior({
+        tools: ['listTasks', 'updateTask'],
+        requires_confirmation: ['updateTask'],
+      }),
+      goal: 'Analyze open tasks and set priority based on due date and impact. ' +
+            'Return a ranked list with reasoning for each priority assignment.',
+    }),
+  ];
+}
+```
+
+Endpoint: `POST /api/intents/{bundle}/{intent}` is auto-registered. Requires `@anthropic-ai/claude-agent-sdk` and `ANTHROPIC_API_KEY`.
+
+### Embeddings Configuration
+
+Enable vector search in your mount plan:
+
+```yaml
+embeddings:
+  provider: local           # local (default) | openai (future)
+  store: sqlite             # sqlite (default) | sqlite-vss (future)
+```
+
+The `search()` interface on the data layer is stable across all providers and stores — swap `provider` or `store` without changing bundle code.
+
+Fields marked `vectorize: true` in a `Context` definition are auto-indexed at insert and update time. No migration needed when adding vectorized fields to an existing table.
+
 ---
 
 ## Query Operators

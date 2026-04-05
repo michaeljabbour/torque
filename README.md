@@ -110,6 +110,23 @@ The kernel compiles each Intent into a REST endpoint, an agent tool schema, and 
 
 See the [Intents Tutorial](./docs/INTENTS_TUTORIAL.md) for the full walkthrough.
 
+### Agent Runtime
+
+`POST /api/intents/{bundle}/{intent}` triggers a ClaudeRuntime execution via `claude-agent-sdk`. Each request runs a full agent loop: context retrieval, tool calls, confirmation gates, and a structured response. Intents declare their contracts in the manifest:
+
+- **success criteria** — the goal condition the agent must satisfy before returning
+- **allowed tools** — an explicit allowlist of bundle methods the agent may call
+- **human confirmation** — tools that require user approval before execution
+
+No prompt engineering. Safety is structural.
+
+### Observability & Security
+
+One-line opt-in via `behaviors:` in your mount plan bundle entry:
+
+- **Observability** (`behaviors: [observability]`) — OTel spans on every route and coordinator call, structured JSON logs with trace IDs, automatic trace correlation across bundles
+- **Security** (`behaviors: [security-hardened]`) — RBAC role checks before route handlers, rate limiting per user/IP, CSRF validation on state-mutating routes, audit logging of all write operations
+
 ## Ecosystem
 
 ### Install Modes

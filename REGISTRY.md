@@ -42,6 +42,29 @@ Optional capabilities that enhance core services. Install alongside the service 
 | `@torquedev/ext-search` | 0.1.0 | `npm install @torquedev/ext-search` | [torque-ext-search](https://github.com/torque-framework/torque-ext-search) | SQLite FTS5 full-text search |
 | `@torquedev/ext-storage` | 0.1.0 | `npm install @torquedev/ext-storage` | [torque-ext-storage](https://github.com/torque-framework/torque-ext-storage) | File storage with bundle-scoped namespaces |
 
+## Phase 3 Extensions
+
+Advanced capabilities introduced in Phase 3. Install alongside the services they extend.
+
+### Extensions
+
+| Extension | Package | Provides | Extends |
+|-----------|---------|----------|---------|
+| `ext-embeddings` | `@torquedev/ext-embeddings` | Vector search — embedding generation, similarity queries, auto-indexing | EventBus (vectorizes fields on publish) |
+| `ext-otel` | `@torquedev/ext-otel` | OpenTelemetry spans, structured JSON logs, trace correlation | Hook positions: `beforeRoute`, `afterRoute`, `onError` |
+| `ext-security` | `@torquedev/ext-security` | RBAC role checks, rate limiting, CSRF validation, audit logging | Hook positions: `beforeRoute`, `afterRoute`, `onAuth` |
+
+### Behaviors
+
+One-line opt-in via the `behaviors:` key in your mount plan bundle entry.
+
+| Behavior | Extension | Mount Plan Usage |
+|----------|-----------|-----------------|
+| `observability` | `ext-otel` | `behaviors: [observability]` |
+| `security-hardened` | `ext-security` | `behaviors: [security-hardened]` |
+
+---
+
 ## Bundles
 
 Self-contained feature modules loaded via mount plans. Install via git URL in your mount plan.
