@@ -1090,6 +1090,112 @@ this.data.insert('tasks', record, { validate: true });
 
 ---
 
+## Hot Reload
+
+In development, Torque watches your bundle source files and reloads changed bundles without restarting the server.
+
+### The 4-Step Reload Process
+
+When a file change is detected, the kernel performs four steps:
+
+1. **Unload** — The bundle's routes, event subscriptions, and interfaces are unregistered from the kernel
+2. **Re-import** — The bundle module is re-imported with cache-busting (a `?t=<timestamp>` query parameter forces Node.js to bypass the module cache)
+3. **Re-register** — The new bundle instance is registered: routes remounted, interfaces rewired, subscriptions restored
+4. **WebSocket notify** — Connected clients receive a reload notification so the browser can refresh
+
+### What Reloads Automatically
+
+- Route handler logic (changes in `routes()`)
+- Interface implementations (changes in `interfaces()`)
+- Event subscriptions (changes in `setupSubscriptions()`)
+- Agent definitions (changes in `agent.md` or `intents()`)
+
+### What Requires a Full Restart
+
+- Schema changes (`schema.tables` in `manifest.yml`)
+- Route manifest changes (adding/removing routes in `api.routes`)
+- Dependency changes (`depends_on`, `optional_deps`)
+- Mount plan changes (`config/mount_plans/*.yml`)
+
+### Limitations
+
+- **In-memory state is lost** on each reload — if your bundle stores data in instance variables between requests, it will be reset
+- **Database state persists** — SQLite writes survive reloads
+- **300ms debounce** — rapid saves trigger a single reload, not multiple
+- **Development only** — hot reload is disabled when `NODE_ENV=production`
+
+### WebSocket Notification Format
+
+When a bundle reloads, the server broadcasts to all connected WebSocket clients:
+
+```json
+{
+  "type": "__torque_reload",
+  "bundle": "tasks",
+  "timestamp": 1712345678901
+}
+```
+
+The shell listens for `__torque_reload` messages and performs a soft refresh of the current view.
+
+---
+
+## Integration Testing
+
+For end-to-end integration tests that exercise your bundle through real HTTP, use `createTestApp()` from `@torquedev/test-helpers`.
+
+### Setup
+
+```bash
+npm install --save-dev @torquedev/test-helpers
+```
+
+### Usage
+
+```js
+import { describe, it, before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import { createTestApp } from '@torquedev/test-helpers';
+
+describe('Tasks integration', () => {
+  let app;
+
+  before(async () => {
+    app = await createTestApp({
+      bundles: ['tasks', 'identity'],
+    });
+  });
+
+  after(async () => {
+    await app.close();
+  });
+
+  it('creates a task via HTTP', async () => {
+    const res = await app.fetch('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Write docs', created_by: 'user-1' }),
+    });
+    assert.equal(res.status, 201);
+    const body = await res.json();
+    assert.equal(body.title, 'Write docs');
+  });
+});
+```
+
+### API
+
+| Member | Type | Description |
+|--------|------|-------------|
+| `fetch(path, opts)` | method | Sends an HTTP request to the test server. Returns a standard `Response`. |
+| `port` | number | The port the test server is listening on. |
+| `registry` | object | The kernel's bundle registry — inspect registered bundles and their state. |
+| `dataLayer` | object | Direct access to the SQLite data layer for setup/teardown. |
+| `eventBus` | object | The event bus — inspect published events or emit test events. |
+| `close()` | method | Shuts down the test server and cleans up resources. Always call in `after()`. |
+
+---
+
 ## Mounting Your Bundle
 
 ### Adding to a mount plan

@@ -41,18 +41,9 @@ Optional capabilities that enhance core services. Install alongside the service 
 | `@torquedev/ext-async-events` | 0.1.0 | `npm install @torquedev/ext-async-events` | [torque-ext-async-events](https://github.com/torque-framework/torque-ext-async-events) | Async job queue with retry for eventbus |
 | `@torquedev/ext-search` | 0.1.0 | `npm install @torquedev/ext-search` | [torque-ext-search](https://github.com/torque-framework/torque-ext-search) | SQLite FTS5 full-text search |
 | `@torquedev/ext-storage` | 0.1.0 | `npm install @torquedev/ext-storage` | [torque-ext-storage](https://github.com/torque-framework/torque-ext-storage) | File storage with bundle-scoped namespaces |
-
-## Phase 3 Extensions
-
-Advanced capabilities introduced in Phase 3. Install alongside the services they extend.
-
-### Extensions
-
-| Extension | Package | Provides | Extends |
-|-----------|---------|----------|---------|
-| `ext-embeddings` | `@torquedev/ext-embeddings` | Vector search — embedding generation, similarity queries, auto-indexing | EventBus (vectorizes fields on publish) |
-| `ext-otel` | `@torquedev/ext-otel` | OpenTelemetry spans, structured JSON logs, trace correlation | Hook positions: `beforeRoute`, `afterRoute`, `onError` |
-| `ext-security` | `@torquedev/ext-security` | RBAC role checks, rate limiting, CSRF validation, audit logging | Hook positions: `beforeRoute`, `afterRoute`, `onAuth` |
+| `@torquedev/ext-embeddings` | 0.1.0 | `npm install @torquedev/ext-embeddings` | [torque-ext-embeddings](https://github.com/torque-framework/torque-ext-embeddings) | Vector search — embedding generation, similarity queries, auto-indexing |
+| `@torquedev/ext-otel` | 0.1.0 | `npm install @torquedev/ext-otel` | [torque-ext-otel](https://github.com/torque-framework/torque-ext-otel) | OpenTelemetry spans, structured JSON logs, trace correlation across bundles |
+| `@torquedev/ext-security` | 0.1.0 | `npm install @torquedev/ext-security` | [torque-ext-security](https://github.com/torque-framework/torque-ext-security) | RBAC role checks, rate limiting, CSRF validation, audit logging |
 
 ### Behaviors
 

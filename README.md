@@ -200,7 +200,7 @@ torque generate scaffold <name> <field:type>   # Rails-style CRUD bundle
 torque generate bundle <name>                  # Empty bundle skeleton
 torque generate intent <bundle> <name>         # Intent triplet (Context + Behavior + Intent)
 torque start [--port 9292]                     # Start the server
-torque dev                                     # Start with file watching
+torque dev                                     # Start with file watching and hot reload
 torque validate                                # Check composability contracts
 torque doctor                                  # Diagnose common issues
 torque info <bundle>                           # Show bundle details
@@ -214,6 +214,16 @@ torque clean [--deps|--data|--all]             # Remove artifacts
 ```
 
 See [torque-cli](https://github.com/torque-framework/torque-cli) for full command documentation.
+
+### Integration Testing
+
+For integration tests that run your bundle through real HTTP, install the test helpers package:
+
+```bash
+npm install --save-dev @torquedev/test-helpers
+```
+
+See the [Bundle Authoring Guide](./docs/BUNDLE_AUTHORING.md#integration-testing) for a full usage example with `createTestApp()`.
 
 ## Deployment
 
