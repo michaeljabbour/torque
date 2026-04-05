@@ -152,9 +152,15 @@ def test_bundle_authoring_code_fences_balanced():
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_registry_phase3_section():
+def test_registry_testing_section():
+    """The Testing & Development section was added as the task-8 deliverable."""
     content = _CONTENT[REGISTRY]
-    assert "Phase 3" in content, "Missing 'Phase 3' section heading in REGISTRY.md"
+    assert "Testing & Development" in content, (
+        "Missing 'Testing & Development' section in REGISTRY.md"
+    )
+    assert "test-helpers" in content, (
+        "Missing 'test-helpers' package in REGISTRY.md Testing section"
+    )
 
 
 def test_registry_ext_embeddings():
