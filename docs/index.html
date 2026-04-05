@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Torque — Language-Agnostic, Agentic-First Composable Monolith Framework</title>
+  <meta name="description" content="Torque is a language-agnostic, agentic-first composable monolith framework. Declare Intents instead of writing controllers. The kernel handles the rest.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #06060b;
+      --surface: #0c0c14;
+      --elevated: #13131e;
+      --overlay: #1a1a28;
+      --text: #e8e8f0;
+      --subtext: #9898ad;
+      --muted: #5a5a72;
+      --primary: #00d4aa;
+      --primary-hover: #00f0c0;
+      --primary-dim: rgba(0,212,170,0.10);
+      --secondary: #7c6aef;
+      --accent: #f0a030;
+      --blue: #4d9ef6;
+      --red: #ef5f6b;
+      --yellow: #efc944;
+      --pink: #e879a8;
+      --border: #1a1a28;
+      --border-light: #252535;
+      --glow-primary: rgba(0,212,170,0.15);
+      --glow-secondary: rgba(124,106,239,0.12);
+      --mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 16px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+    a { color: var(--primary); text-decoration: none; transition: color 0.15s; }
+    a:hover { color: var(--primary-hover); }
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+    .container--wide { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+    .section { padding: 96px 0; }
+    .section--alt { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .section--elevated { background: linear-gradient(180deg, rgba(0,212,170,0.03) 0%, rgba(124,106,239,0.02) 100%); }
+    .section-label { font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+    .section-title { font-size: clamp(26px, 4vw, 48px); font-weight: 800; color: var(--text); line-height: 1.1; margin-bottom: 16px; letter-spacing: -0.02em; }
+    .section-sub { font-size: 17px; color: var(--subtext); max-width: 600px; line-height: 1.75; }
+    .section-header { margin-bottom: 56px; }
+
+    /* Animations */
+    @keyframes pulse-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(0.85); } }
+    @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
+    @keyframes glow-pulse { 0%, 100% { opacity: 0.15; } 50% { opacity: 0.3; } }
+    @keyframes slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes gradient-shift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+    /* Navigation */
+    .nav { position: sticky; top: 0; z-index: 200; background: rgba(12,12,20,0.88); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+    .nav__inner { display: flex; align-items: center; justify-content: space-between; height: 60px; max-width: 1400px; margin: 0 auto; padding: 0 24px; }
+    .nav__logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; color: var(--text); text-decoration: none; font-family: var(--sans); }
+    .nav__logo:hover { color: var(--text); }
+    .nav__logo-icon { width: 28px; height: 28px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: var(--bg); font-family: var(--mono); flex-shrink: 0; }
+    .nav__links { display: flex; align-items: center; gap: 4px; list-style: none; }
+    .nav__links a { font-size: 13px; font-weight: 500; color: var(--subtext); text-decoration: none; padding: 8px 14px; border-radius: 6px; transition: all 0.15s; }
+    .nav__links a:hover { color: var(--text); background: var(--overlay); }
+    .nav__links a.active { color: var(--primary); background: var(--primary-dim); }
+    .nav__right { display: flex; align-items: center; gap: 12px; }
+    .nav__github { display: flex; align-items: center; color: var(--subtext); transition: color 0.15s; }
+    .nav__github:hover { color: var(--primary); }
+    .nav__cta { display: inline-flex; align-items: center; padding: 8px 18px; background: var(--primary); color: var(--bg); font-size: 13px; font-weight: 600; border-radius: 6px; text-decoration: none; transition: all 0.2s; }
+    .nav__cta:hover { background: var(--primary-hover); color: var(--bg); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,212,170,0.2); }
+    .nav__hamburger { display: none; background: none; border: none; color: var(--subtext); cursor: pointer; padding: 4px; font-size: 20px; }
+    .mobile-nav { display: none; background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px 20px; }
+    .mobile-nav.open { display: block; }
+    .mobile-nav a { display: block; padding: 10px 4px; font-size: 15px; color: var(--subtext); border-bottom: 1px solid var(--border); text-decoration: none; }
+    .mobile-nav a:last-child { border-bottom: none; }
+    .mobile-nav a:hover { color: var(--text); }
+    @media (max-width: 768px) {
+      .nav__links, .nav__right { display: none; }
+      .nav__hamburger { display: block; }
+    }
+
+    /* Hero */
+    .hero { padding: 120px 0 100px; position: relative; overflow: hidden; }
+    .hero::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(ellipse 900px 450px at 50% -20%, var(--glow-primary) 0%, transparent 60%),
+                  radial-gradient(ellipse 700px 400px at 10% 60%, var(--glow-secondary) 0%, transparent 60%),
+                  radial-gradient(ellipse 600px 350px at 90% 70%, rgba(240,160,48,0.08) 0%, transparent 60%);
+      animation: glow-pulse 4s ease-in-out infinite;
+    }
+    .hero::after {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none;
+      background:
+        radial-gradient(circle at 20% 80%, rgba(0,212,170,0.05) 0%, transparent 40%),
+        radial-gradient(circle at 80% 20%, rgba(124,106,239,0.05) 0%, transparent 40%);
+    }
+    .hero__inner { position: relative; z-index: 1; }
+    .hero__badge { display: inline-flex; align-items: center; gap: 10px; background: rgba(0,212,170,0.08); border: 1px solid rgba(0,212,170,0.25); border-radius: 100px; padding: 8px 18px; font-family: var(--mono); font-size: 12px; color: var(--subtext); margin-bottom: 32px; }
+    .hero__badge-dot { width: 8px; height: 8px; background: var(--primary); border-radius: 50%; animation: pulse-dot 2s ease-in-out infinite; }
+    .hero__title { font-size: clamp(64px, 11vw, 100px); font-weight: 900; line-height: 0.95; letter-spacing: -0.03em; margin-bottom: 16px; background: linear-gradient(135deg, var(--text) 0%, var(--primary) 45%, var(--secondary) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero__tagline { font-size: clamp(18px, 3vw, 26px); font-weight: 500; color: var(--subtext); margin-bottom: 16px; font-style: italic; }
+    .hero__subtitle { font-size: 17px; color: var(--subtext); max-width: 620px; line-height: 1.8; margin-bottom: 48px; }
+    .hero__actions { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 52px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; border-radius: 8px; font-family: var(--sans); font-size: 15px; font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.2s; border: none; }
+    .btn--primary { background: var(--primary); color: var(--bg); }
+    .btn--primary:hover { background: var(--primary-hover); color: var(--bg); transform: translateY(-2px); box-shadow: 0 12px 32px rgba(0,212,170,0.25); }
+    .btn--outline { background: transparent; color: var(--text); border: 1px solid var(--border-light); }
+    .btn--outline:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-dim); transform: translateY(-2px); }
+    .hero__install { font-family: var(--mono); font-size: 13px; color: var(--muted); background: var(--overlay); border: 1px solid var(--border-light); border-radius: 8px; padding: 12px 16px; display: inline-block; }
+    .hero__install span { color: var(--primary); }
+
+    /* Feature Cards */
+    .pitch-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .pitch-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 36px 28px; position: relative; transition: all 0.3s; overflow: hidden; }
+    .pitch-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+    .pitch-card:nth-child(1)::before { background: linear-gradient(90deg, var(--primary), var(--secondary)); }
+    .pitch-card:nth-child(2)::before { background: linear-gradient(90deg, var(--blue), var(--primary)); }
+    .pitch-card:nth-child(3)::before { background: linear-gradient(90deg, var(--secondary), var(--accent)); }
+    .pitch-card:hover { border-color: var(--border-light); transform: translateY(-6px); box-shadow: 0 24px 48px rgba(0,212,170,0.1); background: linear-gradient(135deg, rgba(0,212,170,0.03) 0%, rgba(124,106,239,0.02) 100%); }
+    .pitch-card__icon { font-size: 32px; margin-bottom: 18px; }
+    .pitch-card__title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 12px; }
+    .pitch-card__body { font-size: 15px; color: var(--subtext); line-height: 1.75; }
+    .pitch-card__body code { font-family: var(--mono); font-size: 13px; color: var(--primary); background: var(--overlay); padding: 2px 6px; border-radius: 4px; }
+
+    /* Tabs */
+    .tabs { margin-bottom: 32px; }
+    .tabs__nav { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 0; }
+    .tabs__btn { background: none; border: none; padding: 14px 18px; font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer; position: relative; transition: color 0.2s; font-family: var(--sans); }
+    .tabs__btn:hover { color: var(--subtext); }
+    .tabs__btn.active { color: var(--primary); }
+    .tabs__btn.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 3px; background: var(--primary); }
+    .tabs__content { display: none; }
+    .tabs__content.active { display: block; animation: slide-up 0.3s ease-out; }
+
+    /* Code */
+    .code-pane { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .code-pane__header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--overlay); }
+    .code-pane__dots { display: flex; gap: 8px; }
+    .code-pane__dot { width: 12px; height: 12px; border-radius: 50%; }
+    .code-pane__dot:nth-child(1) { background: #ef5f6b; }
+    .code-pane__dot:nth-child(2) { background: #efc944; }
+    .code-pane__dot:nth-child(3) { background: #00d4aa; }
+    .code-pane__filename { font-family: var(--mono); font-size: 12px; color: var(--subtext); }
+    .code-pane__body { padding: 24px; overflow-x: auto; }
+    .code-pane__body::-webkit-scrollbar { height: 6px; }
+    .code-pane__body::-webkit-scrollbar-track { background: var(--overlay); }
+    .code-pane__body::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+    .code-pane__body::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+    pre { font-family: var(--mono); font-size: 13px; line-height: 1.8; white-space: pre; tab-size: 2; color: var(--text); }
+    .t-key { color: var(--blue); }
+    .t-str { color: var(--primary); }
+    .t-num { color: var(--accent); }
+    .t-bool { color: var(--secondary); }
+    .t-fn { color: var(--accent); }
+    .t-kw { color: var(--secondary); }
+    .t-cls { color: var(--yellow); }
+    .t-type { color: var(--primary); }
+    .t-punct { color: var(--muted); }
+    .t-muted { color: var(--muted); }
+    .code-caption { text-align: center; padding: 22px; color: var(--subtext); font-size: 15px; font-weight: 500; }
+    .code-caption strong { color: var(--text); }
+
+    /* Steps */
+    .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+    .step { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 32px 24px; text-align: center; transition: all 0.3s; position: relative; }
+    .step:hover { border-color: var(--border-light); transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,212,170,0.08); background: linear-gradient(135deg, rgba(0,212,170,0.04) 0%, rgba(124,106,239,0.02) 100%); }
+    .step__num { width: 48px; height: 48px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 18px; font-weight: 800; color: var(--bg); margin: 0 auto 18px; }
+    .step__cmd { font-family: var(--mono); font-size: 13px; color: var(--primary); background: var(--overlay); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; margin: 0 auto 14px; display: block; word-break: break-all; }
+    .step__title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .step__body { font-size: 14px; color: var(--subtext); line-height: 1.65; }
+
+    /* Table */
+    .table-wrapper { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    thead tr { background: var(--overlay); }
+    thead th { padding: 16px 20px; text-align: left; font-weight: 700; font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+    thead th:first-child { color: var(--subtext); width: 180px; }
+    thead th.col-torque { color: var(--primary); }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(0,212,170,0.04); }
+    tbody td { padding: 14px 20px; color: var(--subtext); vertical-align: top; }
+    tbody td:first-child { color: var(--text); font-weight: 600; font-size: 14px; }
+    tbody td.col-torque { color: var(--text); background: rgba(0,212,170,0.06); font-weight: 500; }
+    .tag { display: inline-block; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-family: var(--mono); font-weight: 600; }
+    .tag--primary { background: rgba(0,212,170,0.18); color: var(--primary); }
+    .tag--secondary { background: rgba(124,106,239,0.18); color: var(--secondary); }
+    .tag--accent { background: rgba(240,160,48,0.18); color: var(--accent); }
+
+    /* Architecture */
+    .arch { font-family: var(--mono); max-width: 800px; margin: 0 auto; }
+    .arch-row { display: flex; gap: 14px; justify-content: center; margin-bottom: 16px; flex-wrap: wrap; }
+    .arch-connector { display: flex; justify-content: center; padding: 6px 0; color: var(--muted); font-size: 16px; width: 100%; }
+    .arch-box { border-radius: 8px; padding: 16px 20px; font-size: 13px; font-weight: 600; text-align: center; border: 1px solid transparent; transition: all 0.2s; }
+    .arch-box:hover { transform: translateY(-2px); }
+    .arch-box--mount { background: rgba(0,212,170,0.12); border-color: rgba(0,212,170,0.35); color: var(--primary); width: 100%; max-width: 700px; }
+    .arch-box--bundle { background: rgba(77,158,246,0.12); border-color: rgba(77,158,246,0.35); color: var(--blue); flex: 1; min-width: 120px; }
+    .arch-box--kernel { background: rgba(124,106,239,0.12); border-color: rgba(124,106,239,0.35); color: var(--secondary); flex: 1; min-width: 140px; }
+    .arch-box--service { background: rgba(240,160,48,0.12); border-color: rgba(240,160,48,0.35); color: var(--accent); flex: 1; min-width: 120px; }
+    .arch-box--db { background: rgba(0,212,170,0.12); border-color: rgba(0,212,170,0.35); color: var(--primary); width: 100%; max-width: 700px; }
+    .arch-box__label { font-size: 11px; font-weight: 400; opacity: 0.7; display: block; margin-top: 4px; }
+    .arch-label { text-align: center; font-size: 11px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; margin-top: 4px; }
+
+    /* Community Cards */
+    .community-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+    .community-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 32px 24px; text-align: center; transition: all 0.3s; }
+    .community-card:hover { border-color: var(--border-light); transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,212,170,0.08); background: linear-gradient(135deg, rgba(0,212,170,0.04) 0%, rgba(124,106,239,0.02) 100%); }
+    .community-card__icon { font-size: 40px; margin-bottom: 16px; }
+    .community-card__title { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+    .community-card__body { font-size: 14px; color: var(--subtext); line-height: 1.65; }
+
+    /* Terminal blocks */
+    .terminal-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 32px; }
+    .terminal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .terminal__header { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: var(--overlay); border-bottom: 1px solid var(--border); }
+    .terminal__dot { width: 10px; height: 10px; border-radius: 50%; }
+    .terminal__dot:nth-child(1) { background: #ef5f6b; }
+    .terminal__dot:nth-child(2) { background: #efc944; }
+    .terminal__dot:nth-child(3) { background: #00d4aa; }
+    .terminal__title { margin-left: 8px; font-family: var(--mono); font-size: 12px; color: var(--subtext); }
+    .terminal__body { padding: 20px; }
+    .terminal__body pre { font-size: 12px; color: var(--subtext); line-height: 1.7; }
+    .terminal__cmd { color: var(--primary); }
+    .terminal__out { color: var(--subtext); }
+
+    /* Doc cards */
+    .doc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .doc-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px 24px; text-decoration: none; display: flex; flex-direction: column; gap: 12px; transition: all 0.3s; position: relative; overflow: hidden; }
+    .doc-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--primary), transparent); opacity: 0; transition: opacity 0.3s; }
+    .doc-card:hover::before { opacity: 1; }
+    .doc-card:hover { border-color: var(--border-light); transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,212,170,0.08); background: linear-gradient(135deg, rgba(0,212,170,0.04) 0%, rgba(124,106,239,0.02) 100%); color: inherit; }
+    .doc-card__icon { font-size: 24px; }
+    .doc-card__title { font-size: 16px; font-weight: 700; color: var(--text); }
+    .doc-card__path { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+    .doc-card__desc { font-size: 14px; color: var(--subtext); line-height: 1.65; flex-grow: 1; }
+    .doc-card__arrow { font-size: 18px; color: var(--muted); transition: all 0.2s; margin-top: auto; }
+    .doc-card:hover .doc-card__arrow { color: var(--primary); }
+
+    /* Footer */
+    footer { background: var(--surface); border-top: 1px solid var(--border); padding: 60px 0 24px; }
+    .footer__inner { display: flex; align-items: flex-start; justify-content: space-between; gap: 48px; flex-wrap: wrap; margin-bottom: 40px; }
+    .footer__brand { max-width: 340px; }
+    .footer__logo { display: flex; align-items: center; gap: 12px; font-weight: 800; font-size: 18px; color: var(--text); margin-bottom: 14px; }
+    .footer__logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; color: var(--bg); font-family: var(--mono); }
+    .footer__tagline { font-size: 14px; color: var(--subtext); line-height: 1.7; }
+    .footer__links { display: flex; gap: 56px; flex-wrap: wrap; }
+    .footer__col-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--primary); margin-bottom: 16px; }
+    .footer__col-links { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .footer__col-links a { font-size: 14px; color: var(--subtext); transition: color 0.2s; }
+    .footer__col-links a:hover { color: var(--text); }
+    .footer__bottom { padding-top: 20px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
+    .footer__copy { font-size: 13px; color: var(--muted); }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .pitch-grid { grid-template-columns: 1fr 1fr; }
+      .community-grid { grid-template-columns: repeat(2, 1fr); }
+      .doc-grid { grid-template-columns: repeat(2, 1fr); }
+      .terminal-grid { grid-template-columns: 1fr 1fr; }
+      .steps { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .section { padding: 72px 0; }
+      .hero { padding: 100px 0 80px; }
+      .nav__links { display: none; }
+      .nav__hamburger { display: block; }
+      .pitch-grid { grid-template-columns: 1fr; }
+      .community-grid { grid-template-columns: 1fr; }
+      .doc-grid { grid-template-columns: 1fr; }
+      .terminal-grid { grid-template-columns: 1fr; }
+      .steps { grid-template-columns: 1fr; }
+      .footer__links { gap: 28px; }
+      .footer__inner { gap: 28px; }
+      .footer__bottom { flex-direction: column; align-items: flex-start; }
+      .hero__title { font-size: 48px; }
+      .section-title { font-size: 32px; }
+      .tabs__nav { overflow-x: auto; }
+      thead th, tbody td { padding: 12px 14px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="nav__inner">
+      <a href="index.html" class="nav__logo">
+        <div class="nav__logo-icon">T</div>
+        <span>Torque</span>
+      </a>
+      <div class="nav__links">
+        <a href="index.html" class="active">Docs</a>
+        <a href="#intents">Intents</a>
+        <a href="tutorial.html">Tutorial</a>
+        <a href="architecture.html">Architecture</a>
+      </div>
+      <div class="nav__right">
+        <a href="https://github.com/torque-framework/torque" target="_blank" class="nav__github">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+        </a>
+        <a href="#getting-started" class="nav__cta">Get Started</a>
+        <button class="nav__hamburger" onclick="toggleMobileNav()" aria-label="Toggle menu">☰</button>
+      </div>
+    </div>
+    <div class="mobile-nav" id="mobile-nav">
+      <a href="index.html">Docs</a>
+      <a href="#intents">Intents</a>
+      <a href="tutorial.html">Tutorial</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="#getting-started">Get Started</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero__inner">
+        <div class="hero__badge">
+          <div class="hero__badge-dot"></div>
+          v1.0.0 · Language-Agnostic · MIT License
+        </div>
+        <h1 class="hero__title">Torque</h1>
+        <p class="hero__tagline">Write constraints for an intelligence.</p>
+        <p class="hero__subtitle">
+          Declare what you want (Context), why you want it (Intent), and how safe it should be (Behavior). The kernel reads your Intent and compiles it into a REST API, an Agent Tool Schema, and real-time execution streams &mdash; simultaneously. You write the contract. The framework delivers the infrastructure.
+        </p>
+        <div class="hero__actions">
+          <a href="#getting-started" class="btn btn--primary">
+            <span>▶</span> Get Started
+          </a>
+          <a href="architecture.html" class="btn btn--outline">
+            Explore Architecture →
+          </a>
+        </div>
+        <div class="hero__install">
+          <span>$</span> npm install -g @torquedev/cli
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="section section--alt" id="features">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">Why Torque</div>
+        <h2 class="section-title">Controlled force around a single axis.</h2>
+        <p class="section-sub">Torque applies mechanical advantage to application development. You define the contract. The kernel multiplies it into infrastructure. No brute force — just leverage.</p>
+      </div>
+      <div class="pitch-grid">
+        <div class="pitch-card">
+          <div class="pitch-card__icon">📋</div>
+          <div class="pitch-card__title">Manifest-First</div>
+          <p class="pitch-card__body">A manifest, a logic file, and optionally an Intent triplet. The kernel provisions your database, registers your API, wires events, enforces isolation, and auto-generates Agent Tool Schemas.</p>
+        </div>
+        <div class="pitch-card">
+          <div class="pitch-card__icon">🔒</div>
+          <div class="pitch-card__title">Runtime Isolation</div>
+          <p class="pitch-card__body">Each bundle gets its own scoped data access and a coordinator that only reaches declared dependencies. Cross a boundary you didn’t declare? The kernel stops you. Not a warning — a wall.</p>
+        </div>
+        <div class="pitch-card">
+          <div class="pitch-card__icon">🤖</div>
+          <div class="pitch-card__title">Intent-Driven</div>
+          <p class="pitch-card__body">Stop writing controllers. Declare Intents with success criteria and behavioral guardrails. The kernel compiles each Intent into a dual-interface API (humans and agents use the same endpoint), an Agent Tool Schema, and real-time WebSocket streams. Safety is mathematical &mdash; <code>requireHumanConfirmation</code> physically gates dangerous tools at runtime.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Intent-Driven Design -->
+  <section class="section" id="intents">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">Intent-Driven Design</div>
+        <h2 class="section-title">Intent is the new controller.</h2>
+        <p class="section-sub">Traditional frameworks have routes and controllers. Torque has Intents &mdash; first-class objects that compile down to REST endpoints, Agent Tool Schemas, and reactive streams simultaneously.</p>
+      </div>
+      <div class="pitch-grid">
+        <div class="pitch-card">
+          <div class="pitch-card__icon">📡</div>
+          <div class="pitch-card__title">Context (What)</div>
+          <p class="pitch-card__body">Data boundary + <code>vectorize</code> for semantic indexing via VORM (Vector-Object Relational Mapping). The agent sees precisely what it needs &mdash; no more, no less.</p>
+        </div>
+        <div class="pitch-card">
+          <div class="pitch-card__icon">🛡️</div>
+          <div class="pitch-card__title">Behavior (How)</div>
+          <p class="pitch-card__body">Mathematical safety, not prompt engineering. <code>allowedTools</code> restricts what the agent can call. <code>requireHumanConfirmation</code> physically gates dangerous actions at the runtime layer.</p>
+        </div>
+        <div class="pitch-card">
+          <div class="pitch-card__icon">🎯</div>
+          <div class="pitch-card__title">Intent (Why)</div>
+          <p class="pitch-card__body">Goals + <code>successCriteria</code>. The kernel evaluates "done" &mdash; you never write if/else controller logic again. One Intent compiles into three manifestations automatically.</p>
+        </div>
+      </div>
+
+      <div style="margin-top:56px;">
+        <div class="section-header">
+          <div class="section-label">Three Manifestations</div>
+          <h2 class="section-title" style="font-size:clamp(22px,3vw,36px);">Define once. Compile to three.</h2>
+        </div>
+        <div class="pitch-grid">
+          <div class="pitch-card">
+            <div class="pitch-card__icon">🌐</div>
+            <div class="pitch-card__title">REST API</div>
+            <p class="pitch-card__body"><code>POST /api/intents/kanban/CreateCard</code> &mdash; standard JSON for your React UI. The kernel skips the LLM for simple payloads. Same endpoint serves humans and agents.</p>
+          </div>
+          <div class="pitch-card">
+            <div class="pitch-card__icon">🤖</div>
+            <div class="pitch-card__title">Agent Tool Schema</div>
+            <p class="pitch-card__body">JSON schema passed to the LLM at runtime. The model knows the data shape, constraints, and success criteria natively. Works with Claude, GPT, or any provider.</p>
+          </div>
+          <div class="pitch-card">
+            <div class="pitch-card__icon">⚡</div>
+            <div class="pitch-card__title">Reactive Streams</div>
+            <p class="pitch-card__body">WebSocket events via HookBus. Real-time UI rendering: <em>Agent thinking&hellip; &rarr; Tool invoked &rarr; Success criteria met &rarr; Done.</em> Full observability, no black box.</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:56px;">
+        <div class="section-header">
+          <div class="section-label">Intelligence Contracts</div>
+          <h2 class="section-title" style="font-size:clamp(22px,3vw,36px);">Smart contracts for cognition.</h2>
+          <p class="section-sub">Ethereum built smart contracts to secure financial intent. Torque builds Intelligence Contracts to secure cognitive intent.</p>
+        </div>
+        <div class="pitch-grid">
+          <div class="pitch-card">
+            <div class="pitch-card__icon">📜</div>
+            <div class="pitch-card__title">The Contract</div>
+            <p class="pitch-card__body">Intent + Behavior = immutable execution constraints. You don't trust the AI &mdash; you trust the Intelligence Contract wrapped around it. <code>allowedTools</code> is physical, not linguistic.</p>
+          </div>
+          <div class="pitch-card">
+            <div class="pitch-card__icon">📒</div>
+            <div class="pitch-card__title">The Ledger</div>
+            <p class="pitch-card__body">The HookBus emits every agent action as a structured event &mdash; a private behavioral blockchain. Full audit trail: intent in, state out. As traceable as Etherscan.</p>
+          </div>
+          <div class="pitch-card">
+            <div class="pitch-card__icon">🧱</div>
+            <div class="pitch-card__title">Composable Legos</div>
+            <p class="pitch-card__body">Bundles are your network's smart contracts. The Registry enforces dependency graphs. <code>bundle.lock</code> tracks evolution. Stack safely, compose fearlessly.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Code Showcase -->
+  <section class="section" id="code">
+    <div class="container--wide">
+      <div class="section-header">
+        <div class="section-label">In Practice</div>
+        <h2 class="section-title">One manifest. One logic file. That's a complete feature.</h2>
+        <p class="section-sub">See how Torque transforms your bundle declaration into a fully operational API with schema, events, and isolation boundaries baked in.</p>
+      </div>
+      <div class="tabs">
+        <div class="tabs__nav">
+          <button class="tabs__btn active" onclick="switchTab('manifest', this)">Manifest</button>
+          <button class="tabs__btn" onclick="switchTab('logic', this)">Logic</button>
+          <button class="tabs__btn" onclick="switchTab('events', this)">Events</button>
+          <button class="tabs__btn" onclick="switchTab('routes', this)">Routes</button>
+          <button class="tabs__btn" onclick="switchTab('intent-example', this)">Intent</button>
+        </div>
+        <div class="tabs__content active" id="manifest">
+          <div class="code-pane">
+            <div class="code-pane__header">
+              <div class="code-pane__dots"><div class="code-pane__dot"></div><div class="code-pane__dot"></div><div class="code-pane__dot"></div></div>
+              <div class="code-pane__filename">bundles/todos/<span style="color:var(--primary)">manifest.yml</span></div>
+            </div>
+            <div class="code-pane__body"><pre><span class="t-key">bundle</span><span class="t-punct">:</span>       <span class="t-str">todos</span>
+<span class="t-key">version</span><span class="t-punct">:</span>      <span class="t-str">"1.0.0"</span>
+<span class="t-key">description</span><span class="t-punct">:</span>  <span class="t-str">"Full CRUD todo management"</span>
+
+<span class="t-key">schema</span><span class="t-punct">:</span>
+  <span class="t-key">todos</span><span class="t-punct">:</span>
+    <span class="t-key">columns</span><span class="t-punct">:</span>
+      <span class="t-key">id</span><span class="t-punct">:</span>
+        <span class="t-key">type</span><span class="t-punct">:</span>           <span class="t-type">integer</span>
+        <span class="t-key">primaryKey</span><span class="t-punct">:</span>    <span class="t-bool">true</span>
+        <span class="t-key">autoIncrement</span><span class="t-punct">:</span> <span class="t-bool">true</span>
+      <span class="t-key">title</span><span class="t-punct">:</span>
+        <span class="t-key">type</span><span class="t-punct">:</span>    <span class="t-type">string</span>
+        <span class="t-key">notNull</span><span class="t-punct">:</span> <span class="t-bool">true</span>
+      <span class="t-key">completed</span><span class="t-punct">:</span>
+        <span class="t-key">type</span><span class="t-punct">:</span>    <span class="t-type">boolean</span>
+        <span class="t-key">default</span><span class="t-punct">:</span> <span class="t-bool">false</span>
+      <span class="t-key">created_at</span><span class="t-punct">:</span>
+        <span class="t-key">type</span><span class="t-punct">:</span>    <span class="t-type">datetime</span>
+        <span class="t-key">default</span><span class="t-punct">:</span> <span class="t-fn">now</span>
+
+<span class="t-key">events</span><span class="t-punct">:</span>
+  <span class="t-key">emits</span><span class="t-punct">:</span>
+    <span class="t-muted">-</span> <span class="t-str">todo.created</span>
+    <span class="t-muted">-</span> <span class="t-str">todo.completed</span>
+  <span class="t-key">listens</span><span class="t-punct">:</span>
+    <span class="t-muted">-</span> <span class="t-str">auth.user.created</span>
+
+<span class="t-key">interfaces</span><span class="t-punct">:</span>
+  <span class="t-muted">-</span> <span class="t-key">name</span><span class="t-punct">:</span>    <span class="t-cls">TodoRepository</span>
+    <span class="t-key">methods</span><span class="t-punct">:</span>
+      <span class="t-muted">-</span> <span class="t-str">findAll(): Promise&lt;Todo[]&gt;</span>
+      <span class="t-muted">-</span> <span class="t-str">findById(id): Promise&lt;Todo&gt;</span>
+      <span class="t-muted">-</span> <span class="t-str">create(data): Promise&lt;Todo&gt;</span>
+
+<span class="t-key">routes</span><span class="t-punct">:</span>
+  <span class="t-muted">-</span> <span class="t-type">GET</span>    <span class="t-str">/api/todos</span>
+  <span class="t-muted">-</span> <span class="t-type">POST</span>   <span class="t-str">/api/todos</span>
+  <span class="t-muted">-</span> <span class="t-type">PUT</span>    <span class="t-str">/api/todos/:id</span>
+  <span class="t-muted">-</span> <span class="t-type">DELETE</span> <span class="t-str">/api/todos/:id</span></pre></div>
+          </div>
+        </div>
+        <div class="tabs__content" id="logic">
+          <div class="code-pane">
+            <div class="code-pane__header">
+              <div class="code-pane__dots"><div class="code-pane__dot"></div><div class="code-pane__dot"></div><div class="code-pane__dot"></div></div>
+              <div class="code-pane__filename">bundles/todos/<span style="color:var(--blue)">logic.js</span></div>
+            </div>
+            <div class="code-pane__body"><pre><span class="t-kw">export default class</span> <span class="t-cls">TodosBundle</span> <span class="t-punct">{</span>
+
+  <span class="t-fn">constructor</span><span class="t-punct">(</span><span class="t-type">context</span><span class="t-punct">) {</span>
+    <span class="t-kw">this</span><span class="t-punct">.</span>db     <span class="t-punct">=</span> context<span class="t-punct">.</span><span class="t-fn">get</span><span class="t-punct">(</span><span class="t-str">'DataLayer'</span><span class="t-punct">);</span>
+    <span class="t-kw">this</span><span class="t-punct">.</span>events <span class="t-punct">=</span> context<span class="t-punct">.</span><span class="t-fn">get</span><span class="t-punct">(</span><span class="t-str">'EventBus'</span><span class="t-punct">);</span>
+  <span class="t-punct">}</span>
+
+  <span class="t-fn">interfaces</span><span class="t-punct">() {</span>
+    <span class="t-kw">return</span> <span class="t-punct">{</span>
+      <span class="t-cls">TodoRepository</span><span class="t-punct">: {</span>
+        <span class="t-fn">findAll</span><span class="t-punct">: () =&gt;</span>
+          <span class="t-kw">this</span><span class="t-punct">.</span>db<span class="t-punct">.</span><span class="t-fn">query</span><span class="t-punct">(</span><span class="t-str">'todos'</span><span class="t-punct">).</span><span class="t-fn">all</span><span class="t-punct">(),</span>
+
+        <span class="t-fn">findById</span><span class="t-punct">: (id) =&gt;</span>
+          <span class="t-kw">this</span><span class="t-punct">.</span>db<span class="t-punct">.</span><span class="t-fn">query</span><span class="t-punct">(</span><span class="t-str">'todos'</span><span class="t-punct">)</span>
+            <span class="t-punct">.</span><span class="t-fn">where</span><span class="t-punct">({ id }).</span><span class="t-fn">first</span><span class="t-punct">(),</span>
+
+        <span class="t-fn">create</span><span class="t-punct">:</span> <span class="t-kw">async</span> <span class="t-punct">(data) =&gt; {</span>
+          <span class="t-kw">const</span> todo <span class="t-punct">=</span> <span class="t-kw">await this</span><span class="t-punct">.</span>db
+            <span class="t-punct">.</span><span class="t-fn">query</span><span class="t-punct">(</span><span class="t-str">'todos'</span><span class="t-punct">).</span><span class="t-fn">insert</span><span class="t-punct">(data);</span>
+          <span class="t-kw">await this</span><span class="t-punct">.</span>events
+            <span class="t-punct">.</span><span class="t-fn">emit</span><span class="t-punct">(</span><span class="t-str">'todo.created'</span><span class="t-punct">, todo);</span>
+          <span class="t-kw">return</span> todo<span class="t-punct">;</span>
+        <span class="t-punct">}</span>
+      <span class="t-punct">}</span>
+    <span class="t-punct">};</span>
+  <span class="t-punct">}</span>
+
+  <span class="t-fn">routes</span><span class="t-punct">() {</span>
+    <span class="t-kw">const</span> repo <span class="t-punct">=</span> <span class="t-kw">this</span><span class="t-punct">.</span><span class="t-fn">interfaces</span><span class="t-punct">().</span><span class="t-cls">TodoRepository</span><span class="t-punct">;</span>
+    <span class="t-kw">return</span> <span class="t-punct">{</span>
+      <span class="t-fn">GET</span>    <span class="t-str">'/api/todos'</span><span class="t-punct">:</span>    <span class="t-punct">()</span> <span class="t-punct">=&gt;</span> repo<span class="t-punct">.</span><span class="t-fn">findAll</span><span class="t-punct">(),</span>
+      <span class="t-fn">POST</span>   <span class="t-str">'/api/todos'</span><span class="t-punct">:</span>    <span class="t-punct">(data) =&gt;</span> repo<span class="t-punct">.</span><span class="t-fn">create</span><span class="t-punct">(data),</span>
+    <span class="t-punct">};</span>
+  <span class="t-punct">}</span>
+<span class="t-punct">}</span></pre></div>
+          </div>
+        </div>
+        <div class="tabs__content" id="events">
+          <div class="code-pane">
+            <div class="code-pane__header">
+              <div class="code-pane__dots"><div class="code-pane__dot"></div><div class="code-pane__dot"></div><div class="code-pane__dot"></div></div>
+              <div class="code-pane__filename">bundles/notifications/<span style="color:var(--primary)">logic.js</span></div>
+            </div>
+            <div class="code-pane__body"><pre><span class="t-kw">export default class</span> <span class="t-cls">NotificationsBundle</span> <span class="t-punct">{</span>
+
+  <span class="t-fn">constructor</span><span class="t-punct">(</span><span class="t-type">context</span><span class="t-punct">) {</span>
+    <span class="t-kw">this</span><span class="t-punct">.</span>events <span class="t-punct">=</span> context<span class="t-punct">.</span><span class="t-fn">get</span><span class="t-punct">(</span><span class="t-str">'EventBus'</span><span class="t-punct">);</span>
+  <span class="t-punct">}</span>
+
+  <span class="t-fn">listen</span><span class="t-punct">() {</span>
+    <span class="t-comment">// Automatically subscribed via manifest</span>
+    <span class="t-kw">this</span><span class="t-punct">.</span>events<span class="t-punct">.</span><span class="t-fn">on</span><span class="t-punct">(</span><span class="t-str">'todo.created'</span><span class="t-punct">,</span> <span class="t-kw">async</span> <span class="t-punct">(payload)</span> <span class="t-punct">=&gt; {</span>
+      <span class="t-kw">await this</span><span class="t-punct">.</span><span class="t-fn">sendNotification</span><span class="t-punct">(</span>
+        <span class="t-str">`New todo created: ${payload.title}`</span>
+      <span class="t-punct">);</span>
+    <span class="t-punct">});</span>
+  <span class="t-punct">}</span>
+
+  <span class="t-fn">sendNotification</span><span class="t-punct">(</span>msg<span class="t-punct">) {</span>
+    <span class="t-comment">// Send to Slack, email, push, etc.</span>
+    console<span class="t-punct">.</span><span class="t-fn">log</span><span class="t-punct">(</span><span class="t-str">'Notification:'</span><span class="t-punct">,</span> msg<span class="t-punct">);</span>
+  <span class="t-punct">}</span>
+<span class="t-punct">}</span></pre></div>
+          </div>
+        </div>
+        <div class="tabs__content" id="routes">
+          <div class="code-pane">
+            <div class="code-pane__header">
+              <div class="code-pane__dots"><div class="code-pane__dot"></div><div class="code-pane__dot"></div><div class="code-pane__dot"></div></div>
+              <div class="code-pane__filename">terminal</div>
+            </div>
+            <div class="code-pane__body"><pre><span style="color:var(--primary)">$</span> <span style="color:var(--text)">curl -X GET http://localhost:9292/api/todos</span>
+
+<span style="color:var(--accent)">[</span>
+  <span style="color:var(--accent)">{</span>
+    <span class="t-key">"id"</span><span class="t-punct">:</span> <span class="t-num">1</span><span class="t-punct">,</span>
+    <span class="t-key">"title"</span><span class="t-punct">:</span> <span class="t-str">"Build Torque bundles"</span><span class="t-punct">,</span>
+    <span class="t-key">"completed"</span><span class="t-punct">:</span> <span class="t-bool">false</span><span class="t-punct">,</span>
+    <span class="t-key">"created_at"</span><span class="t-punct">:</span> <span class="t-str">"2026-03-29T10:30:00Z"</span>
+  <span class="t-accent">}</span>
+<span class="t-accent">]</span>
+
+<span style="color:var(--primary)">$</span> <span style="color:var(--text)">curl -X POST http://localhost:9292/api/todos \</span>
+  <span style="color:var(--text)">-H 'Content-Type: application/json' \</span>
+  <span style="color:var(--text)">-d '{ "title": "Learn Torque" }'</span>
+
+<span style="color:var(--accent)">{</span>
+  <span class="t-key">"id"</span><span class="t-punct">:</span> <span class="t-num">2</span><span class="t-punct">,</span>
+  <span class="t-key">"title"</span><span class="t-punct">:</span> <span class="t-str">"Learn Torque"</span><span class="t-punct">,</span>
+  <span class="t-key">"completed"</span><span class="t-punct">:</span> <span class="t-bool">false</span>
+<span style="color:var(--accent)">}</span></pre></div>
+          </div>
+        </div>
+      </div>
+        <div class="tabs__content" id="intent-example">
+          <div class="code-pane">
+            <div class="code-pane__header">
+              <div class="code-pane__dots"><div class="code-pane__dot"></div><div class="code-pane__dot"></div><div class="code-pane__dot"></div></div>
+              <div class="code-pane__filename">bundles/kanban/intents/OrganizeWork/<span style="color:var(--accent)">intent.js</span></div>
+            </div>
+            <div class="code-pane__body"><pre><span class="t-kw">import</span> <span class="t-punct">{</span> <span class="t-cls">Intent</span> <span class="t-punct">}</span> <span class="t-kw">from</span> <span class="t-str">'@torquedev/core'</span><span class="t-punct">;</span>
+<span class="t-kw">import</span> <span class="t-punct">{</span> <span class="t-cls">OrganizeWorkBehavior</span> <span class="t-punct">}</span> <span class="t-kw">from</span> <span class="t-str">'./behavior.js'</span><span class="t-punct">;</span>
+
+<span class="t-kw">export const</span> <span class="t-cls">OrganizeWorkIntent</span> <span class="t-punct">=</span> <span class="t-kw">new</span> <span class="t-cls">Intent</span><span class="t-punct">({</span>
+  <span class="t-key">name</span><span class="t-punct">:</span>        <span class="t-str">'OrganizeWork'</span><span class="t-punct">,</span>
+  <span class="t-key">description</span><span class="t-punct">:</span> <span class="t-str">'Move cards to appropriate lists based on status.'</span><span class="t-punct">,</span>
+  <span class="t-key">trigger</span><span class="t-punct">:</span>     <span class="t-str">'User asks to organize, triage, or sort cards'</span><span class="t-punct">,</span>
+
+  <span class="t-key">successCriteria</span><span class="t-punct">: [</span>
+    <span class="t-str">'All referenced cards are identified on the board'</span><span class="t-punct">,</span>
+    <span class="t-str">'Cards are moved to the correct target list'</span><span class="t-punct">,</span>
+    <span class="t-str">'A summary of changes is provided to the user'</span><span class="t-punct">,</span>
+  <span class="t-punct">],</span>
+
+  <span class="t-key">behavior</span><span class="t-punct">:</span> <span class="t-cls">OrganizeWorkBehavior</span><span class="t-punct">,</span>
+    <span class="t-muted">// persona: 'You are a project management assistant.'</span>
+    <span class="t-muted">// allowedTools: ['kanban.getBoardSnapshot', 'kanban.moveCard']</span>
+    <span class="t-muted">// requireHumanConfirmation: ['kanban.moveCard']</span>
+<span class="t-punct">});</span></pre></div>
+          </div>
+        </div>
+      <div class="code-caption"><strong>Schema</strong> declares the table. <strong>Events</strong> connect bundles. <strong>Routes</strong> are auto-registered. <strong>Isolation</strong> is enforced at the kernel level.</div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="section section--alt" id="how-it-works">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">Getting Started</div>
+        <h2 class="section-title">From zero to API in four commands.</h2>
+        <p class="section-sub">Torque is designed to feel natural. Create, scaffold, boot, and deploy — that's it.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step__num">1</div>
+          <div class="step__title">Create App</div>
+          <div class="step__cmd">torque new my-app</div>
+          <p class="step__body">Scaffold your application with the standard directory structure, configurations, and kernel setup.</p>
+        </div>
+        <div class="step">
+          <div class="step__num">2</div>
+          <div class="step__title">Generate Bundle</div>
+          <div class="step__cmd">torque generate todos</div>
+          <p class="step__body">Create a new bundle with manifest.yml and logic.js. Choose your schema columns with the interactive prompt.</p>
+        </div>
+        <div class="step">
+          <div class="step__num">3</div>
+          <div class="step__title">Boot Kernel</div>
+          <div class="step__cmd">torque dev</div>
+          <p class="step__body">Start the development kernel. It reads all manifests, provisions databases, wires events, and mounts routes.</p>
+        </div>
+        <div class="step">
+          <div class="step__num">4</div>
+          <div class="step__title">API Live</div>
+          <div class="step__cmd">curl localhost:9292</div>
+          <p class="step__body">Your full-stack API is running on port 9292 with OpenAPI docs, health checks, and introspection endpoints built in.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Comparison -->
+  <section class="section" id="comparison">
+    <div class="container--wide">
+      <div class="section-header">
+        <div class="section-label">Framework Comparison</div>
+        <h2 class="section-title">How Torque compares.</h2>
+        <p class="section-sub">Designed for teams that want isolation without the operational complexity of microservices.</p>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Rails</th>
+              <th>ASP.NET Core</th>
+              <th>MEAN Stack</th>
+              <th class="col-torque">Torque</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Bundle Isolation</td>
+              <td><span class="tag tag--secondary">Convention</span></td>
+              <td><span class="tag tag--secondary">Convention</span></td>
+              <td><span class="tag tag--secondary">Manual</span></td>
+              <td><span class="tag tag--primary">Runtime Enforced</span></td>
+            </tr>
+            <tr>
+              <td>Event Wiring</td>
+              <td><span class="tag tag--secondary">Manual</span></td>
+              <td><span class="tag tag--secondary">Manual</span></td>
+              <td><span class="tag tag--secondary">Manual</span></td>
+              <td><span class="tag tag--primary">Declarative</span></td>
+            </tr>
+            <tr>
+              <td>Schema Provisioning</td>
+              <td><span class="tag tag--secondary">Migrations</span></td>
+              <td><span class="tag tag--secondary">Migrations</span></td>
+              <td><span class="tag tag--secondary">Manual</span></td>
+              <td><span class="tag tag--primary">Manifest-Driven</span></td>
+            </tr>
+            <tr>
+              <td>API Introspection</td>
+              <td><span class="tag tag--secondary">Third-party</span></td>
+              <td><span class="tag tag--secondary">Built-in</span></td>
+              <td><span class="tag tag--secondary">Manual</span></td>
+              <td><span class="tag tag--primary">Native JSON Schema</span></td>
+            </tr>
+            <tr>
+              <td>AI Agent Ready</td>
+              <td><span class="tag tag--secondary">No</span></td>
+              <td><span class="tag tag--secondary">No</span></td>
+              <td><span class="tag tag--secondary">No</span></td>
+              <td><span class="tag tag--primary">Yes — agent.md</span></td>
+            </tr>
+            <tr>
+              <td>Intent-Driven</td>
+              <td><span class="tag tag--secondary">No</span></td>
+              <td><span class="tag tag--secondary">No</span></td>
+              <td><span class="tag tag--secondary">No</span></td>
+              <td class="col-torque"><span class="tag tag--primary">Yes — Context/Behavior/Intent</span></td>
+            </tr>
+            <tr>
+              <td>Learning Curve</td>
+              <td><span class="tag tag--accent">Medium</span></td>
+              <td><span class="tag tag--accent">High</span></td>
+              <td><span class="tag tag--accent">Medium</span></td>
+              <td><span class="tag tag--primary">Low</span></td>
+            </tr>
+            <tr>
+              <td>Deployment</td>
+              <td><span class="tag tag--secondary">Monolith</span></td>
+              <td><span class="tag tag--secondary">Monolith</span></td>
+              <td><span class="tag tag--secondary">Monolith</span></td>
+              <td><span class="tag tag--primary">Composable</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Architecture -->
+  <section class="section section--alt" id="architecture">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">System Design</div>
+        <h2 class="section-title">Layered architecture with clear boundaries.</h2>
+        <p class="section-sub">Each layer is independently testable. Bundles cannot cross isolation boundaries — the kernel enforces this at runtime.</p>
+      </div>
+      <div class="arch">
+        <div class="arch-label">Mount Plan</div>
+        <div class="arch-row">
+          <div class="arch-box arch-box--mount">Declared Bundles & Configuration</div>
+        </div>
+        <div class="arch-connector">↓</div>
+
+        <div class="arch-label">Bundle Layer</div>
+        <div class="arch-row">
+          <div class="arch-box arch-box--bundle">todos<span class="arch-box__label">CRUD</span></div>
+          <div class="arch-box arch-box--bundle">auth<span class="arch-box__label">Sessions</span></div>
+          <div class="arch-box arch-box--bundle">notifications<span class="arch-box__label">Events</span></div>
+        </div>
+        <div class="arch-connector">↓</div>
+
+        <div class="arch-label">Intent Layer</div>
+        <div class="arch-row">
+          <div class="arch-box arch-box--bundle">OrganizeWork<span class="arch-box__label">Context / Behavior / Intent</span></div>
+          <div class="arch-box arch-box--bundle">FindAnything<span class="arch-box__label">Context / Behavior / Intent</span></div>
+          <div class="arch-box arch-box--bundle">ManageAccess<span class="arch-box__label">Context / Behavior / Intent</span></div>
+        </div>
+        <div class="arch-connector">↓</div>
+
+        <div class="arch-label">Kernel Layer</div>
+        <div class="arch-row">
+          <div class="arch-box arch-box--kernel">Registry<span class="arch-box__label">Bundles</span></div>
+          <div class="arch-box arch-box--kernel">Resolver<span class="arch-box__label">Dependencies</span></div>
+          <div class="arch-box arch-box--kernel">HookBus<span class="arch-box__label">Lifecycle</span></div>
+        </div>
+        <div class="arch-connector">↓</div>
+
+        <div class="arch-label">Service Layer</div>
+        <div class="arch-row">
+          <div class="arch-box arch-box--service">DataLayer<span class="arch-box__label">SQL</span></div>
+          <div class="arch-box arch-box--service">EventBus<span class="arch-box__label">Pub/Sub</span></div>
+          <div class="arch-box arch-box--service">Server<span class="arch-box__label">HTTP</span></div>
+        </div>
+        <div class="arch-connector">↓</div>
+
+        <div class="arch-label">Persistence</div>
+        <div class="arch-row">
+          <div class="arch-box arch-box--db">SQLite / PostgreSQL / MySQL</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Community -->
+  <section class="section" id="community">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">Join Us</div>
+        <h2 class="section-title">Join the Torque community.</h2>
+        <p class="section-sub">Open source, open discussion, and open evolution. Help shape the future of composable monoliths.</p>
+      </div>
+      <div class="community-grid">
+        <div class="community-card">
+          <div class="community-card__icon">⭐</div>
+          <div class="community-card__title">GitHub</div>
+          <p class="community-card__body">Star the repo, read the source, open issues, and contribute. Everything is open.</p>
+        </div>
+        <div class="community-card">
+          <div class="community-card__icon">💬</div>
+          <div class="community-card__title">Discord</div>
+          <p class="community-card__body">Chat with the community, get help, share bundles, and discuss framework design.</p>
+        </div>
+        <div class="community-card">
+          <div class="community-card__icon">📝</div>
+          <div class="community-card__title">Blog</div>
+          <p class="community-card__body">Release notes, tutorials, architecture discussions, and framework philosophy.</p>
+        </div>
+        <div class="community-card">
+          <div class="community-card__icon">🤝</div>
+          <div class="community-card__title">Contributing</div>
+          <p class="community-card__body">The framework is open. Help shape the future of Torque through RFCs and proposals.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Getting Started Terminal -->
+  <section class="section section--elevated" id="getting-started">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">Start Building</div>
+        <h2 class="section-title">Get your hands on Torque.</h2>
+        <p class="section-sub">Install the CLI and create your first application in under two minutes.</p>
+      </div>
+      <div class="terminal-grid">
+        <div class="terminal">
+          <div class="terminal__header">
+            <div class="terminal__dot"></div>
+            <div class="terminal__dot"></div>
+            <div class="terminal__dot"></div>
+            <div class="terminal__title">install-cli</div>
+          </div>
+          <div class="terminal__body">
+            <pre><span class="terminal__cmd">$ npm install -g @torquedev/cli</span>
+<span class="terminal__out">added 47 packages in 3.2s</span>
+
+<span class="terminal__cmd">$ torque new my-app</span>
+<span class="terminal__out">✓ Created bundles/
+✓ Created kernel/
+✓ Created config/
+✓ Created package.json
+✓ Created .gitignore
+
+Ready to build. Run: cd my-app && torque dev</span></pre>
+          </div>
+        </div>
+        <div class="terminal">
+          <div class="terminal__header">
+            <div class="terminal__dot"></div>
+            <div class="terminal__dot"></div>
+            <div class="terminal__dot"></div>
+            <div class="terminal__title">boot-kernel</div>
+          </div>
+          <div class="terminal__body">
+            <pre><span class="terminal__cmd">$ cd my-app && torque dev</span>
+<span class="terminal__out">▶ Booting kernel...
+✓ Registry initialized (0 bundles)
+✓ DataLayer connected (SQLite)
+✓ EventBus ready
+✓ Server listening on port 9292
+
+Your API is live!
+→ Health: http://localhost:9292/health
+→ OpenAPI: http://localhost:9292/openapi.json
+→ Introspect: http://localhost:9292/api/introspect</span></pre>
+          </div>
+        </div>
+        <div class="terminal">
+          <div class="terminal__header">
+            <div class="terminal__dot"></div>
+            <div class="terminal__dot"></div>
+            <div class="terminal__dot"></div>
+            <div class="terminal__title">generate-bundle</div>
+          </div>
+          <div class="terminal__body">
+            <pre><span class="terminal__cmd">$ torque generate todos</span>
+<span class="terminal__out">? Table name: todos
+? Columns: title:string, completed:boolean
+✓ Created bundles/todos/manifest.yml
+✓ Created bundles/todos/logic.js
+✓ Added routes to manifest
+
+Kernel will restart. Watch the logs...
+✓ Bundle 'todos' mounted
+✓ Routes registered (GET /api/todos, POST...)
+✓ Schema provisioned</span></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- First Principles -->
+  <section class="section section--alt" id="principles">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">First Principles</div>
+        <h2 class="section-title">Why composition beats configuration.</h2>
+        <p class="section-sub">Torque is built on ideas proven by Unix, LEGO, and the Linux kernel. Here's the thinking behind the framework.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:24px;margin-bottom:48px;">
+        <div class="pitch-card" style="padding:36px 32px;">
+          <div class="pitch-card__icon" style="font-size:32px;">&#129513;</div>
+          <div class="pitch-card__title" style="font-size:18px;margin-bottom:12px;">The LEGO Principle</div>
+          <p class="pitch-card__body" style="font-size:15px;line-height:1.8;">Small, self-contained pieces with shared contracts snap together. A brick doesn't care what it becomes &mdash; spaceship, castle, or something new. The connector is the same on every brick. In Torque, the connector is the manifest.</p>
+        </div>
+        <div class="pitch-card" style="padding:36px 32px;">
+          <div class="pitch-card__icon" style="font-size:32px;">&#128295;</div>
+          <div class="pitch-card__title" style="font-size:18px;margin-bottom:12px;">Mechanism, Not Policy</div>
+          <p class="pitch-card__body" style="font-size:15px;line-height:1.8;">The kernel provides capability. Bundles make decisions. This is the Unix philosophy applied to full-stack apps: a thin orchestrator that reads contracts, provisions services, and enforces boundaries &mdash; then gets out of your way.</p>
+        </div>
+        <div class="pitch-card" style="padding:36px 32px;">
+          <div class="pitch-card__icon" style="font-size:32px;">&#128200;</div>
+          <div class="pitch-card__title" style="font-size:18px;margin-bottom:12px;">Composition Scales Linearly</div>
+          <p class="pitch-card__body" style="font-size:15px;line-height:1.8;">Configuration grows combinatorially &mdash; 10 flags with 2 states = 1,024 combinations. Composition grows linearly &mdash; 10 modules = 10 independent choices. This is why composability wins at scale, and why Torque uses bundles instead of feature flags.</p>
+        </div>
+        <div class="pitch-card" style="padding:36px 32px;">
+          <div class="pitch-card__icon" style="font-size:32px;">&#128065;</div>
+          <div class="pitch-card__title" style="font-size:18px;margin-bottom:12px;">Event-First Observability</div>
+          <p class="pitch-card__body" style="font-size:15px;line-height:1.8;">Events are not a logging afterthought &mdash; they're the primary communication surface. Every bundle publishes and subscribes through the EventBus. If it matters, it's an event. If you need to react, you subscribe. This is how bundles stay isolated while staying connected.</p>
+        </div>
+        <div class="pitch-card" style="padding:36px 32px;">
+          <div class="pitch-card__icon" style="font-size:32px;">🎯</div>
+          <div class="pitch-card__title" style="font-size:18px;margin-bottom:12px;">Intent as First-Class Object</div>
+          <p class="pitch-card__body" style="font-size:15px;line-height:1.8;">Controllers tell a machine what to do. Intents tell it what "done" looks like. The framework compiles your Intent into a REST endpoint, an Agent Tool Schema, and real-time streams &mdash; you define constraints, not instructions. Programming at the level of "why."</p>
+        </div>
+        <div class="pitch-card" style="padding:36px 32px;">
+          <div class="pitch-card__icon" style="font-size:32px;">📜</div>
+          <div class="pitch-card__title" style="font-size:18px;margin-bottom:12px;">Intelligence Contracts</div>
+          <p class="pitch-card__body" style="font-size:15px;line-height:1.8;">Like Ethereum smart contracts enforce financial transactions, Torque Intelligence Contracts enforce cognitive transactions. <code>requireHumanConfirmation</code> is a multisig gate. The HookBus is a behavioral ledger. Safety is mathematical, not linguistic.</p>
+        </div>
+      </div>
+      <div style="background:var(--elevated);border:1px solid var(--border-light);border-radius:12px;padding:36px 40px;max-width:800px;margin:0 auto;">
+        <p style="font-size:16px;color:var(--text);line-height:1.8;margin-bottom:16px;font-weight:500;">The Pattern Progression</p>
+        <p style="font-size:15px;color:var(--subtext);line-height:1.8;margin:0;">
+          Rails made <strong style="color:var(--red);">convention over configuration</strong> mainstream.
+          ASP.NET Core made <strong style="color:var(--blue);">dependency injection</strong> mainstream.
+          Torque makes <strong style="color:var(--primary);">Intent-Driven runtime intelligence</strong> mainstream &mdash;
+          each generation makes the boundary between human and machine harder to violate.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Learn -->
+  <section class="section" id="docs">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">Learn</div>
+        <h2 class="section-title">Go from zero to production.</h2>
+        <p class="section-sub">Everything you need to understand Torque, hands-on.</p>
+      </div>
+      <div class="doc-grid" style="grid-template-columns:repeat(3,1fr);gap:20px;">
+        <a href="tutorial.html" class="doc-card" style="border-color:var(--primary);border-width:1px;">
+          <div class="doc-card__icon" style="font-size:28px;">&#9654;</div>
+          <div class="doc-card__title" style="font-size:17px;">Getting Started Tutorial</div>
+          <p class="doc-card__desc">Build a multi-bundle app with Intents from scratch. Context, Behavior, success criteria, events, and tests.</p>
+          <div class="doc-card__arrow">&rarr;</div>
+        </a>
+        <a href="architecture.html" class="doc-card">
+          <div class="doc-card__icon" style="font-size:28px;">&#128506;</div>
+          <div class="doc-card__title" style="font-size:17px;">Architecture Explorer</div>
+          <p class="doc-card__desc">Interactive diagrams of the kernel, services, boot sequence, and a 6-framework comparison.</p>
+          <div class="doc-card__arrow">&rarr;</div>
+        </a>
+        <a href="https://github.com/torque-framework/torque" class="doc-card" target="_blank">
+          <div class="doc-card__icon" style="font-size:28px;">&#128187;</div>
+          <div class="doc-card__title" style="font-size:17px;">Source &amp; Examples</div>
+          <p class="doc-card__desc">The full framework source, example apps, and community-contributed bundles on GitHub.</p>
+          <div class="doc-card__arrow">&rarr;</div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="footer__inner">
+        <div class="footer__brand">
+          <div class="footer__logo">
+            <div class="footer__logo-icon">⚡</div>
+            Torque
+          </div>
+          <p class="footer__tagline">The language-agnostic, agentic-first composable monolith framework. Write constraints for an intelligence. <em>Open source under MIT.</em></p>
+        </div>
+        <div class="footer__links">
+          <div>
+            <div class="footer__col-title">Framework</div>
+            <ul class="footer__col-links">
+              <li><a href="#features">Features</a></li>
+              <li><a href="#how-it-works">How It Works</a></li>
+              <li><a href="#architecture">Architecture</a></li>
+              <li><a href="#getting-started">Get Started</a></li>
+            </ul>
+          </div>
+          <div>
+            <div class="footer__col-title">Learn</div>
+            <ul class="footer__col-links">
+              <li><a href="tutorial.html">Tutorial</a></li>
+              <li><a href="architecture.html">Architecture</a></li>
+              <li><a href="#principles">First Principles</a></li>
+              <li><a href="https://github.com/torque-framework/torque" target="_blank">Examples</a></li>
+            </ul>
+          </div>
+          <div>
+            <div class="footer__col-title">Community</div>
+            <ul class="footer__col-links">
+              <li><a href="https://github.com/torque-framework/torque">GitHub</a></li>
+              <li><a href="#community">Discord</a></li>
+              <li><a href="#community">Blog</a></li>
+              <li><a href="#community">Contributing</a></li>
+            </ul>
+          </div>
+          <div>
+            <div class="footer__col-title">Resources</div>
+            <ul class="footer__col-links">
+              <li><a href="tutorial.html">Tutorial</a></li>
+              <li><a href="architecture.html">Architecture Docs</a></li>
+              <li><a href="#docs">Full Docs</a></li>
+              <li><a href="https://github.com/torque-framework/torque">Source Code</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="footer__bottom">
+        <div class="footer__copy">© 2026 Torque. Built with care.</div>
+        <div class="footer__inspired">Built by the community. Inspired by Rails, Fiber, and the monolith renaissance.</div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Mobile nav
+    function toggleMobileNav() {
+      const nav = document.getElementById('mobile-nav');
+      nav.classList.toggle('open');
+    }
+
+    function closeMobileNav() {
+      const nav = document.getElementById('mobile-nav');
+      nav.classList.remove('open');
+    }
+
+    // Tab switching
+    function switchTab(tabId, btn) {
+      // Hide all tabs
+      const contents = document.querySelectorAll('.tabs__content');
+      contents.forEach(c => c.classList.remove('active'));
+
+      // Deactivate all buttons
+      const buttons = document.querySelectorAll('.tabs__btn');
+      buttons.forEach(b => b.classList.remove('active'));
+
+      // Show selected tab
+      document.getElementById(tabId).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    // Scroll-based nav link highlighting
+    document.addEventListener('DOMContentLoaded', function() {
+      const sections = document.querySelectorAll('[id]');
+      const navLinks = document.querySelectorAll('.nav__links a[href^="#"]');
+
+      window.addEventListener('scroll', function() {
+        let current = '';
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          if (pageYOffset >= sectionTop - 200) {
+            current = section.getAttribute('id');
+          }
+        });
+
+        navLinks.forEach(link => {
+          link.classList.remove('active');
+          if (link.getAttribute('href').slice(1) === current) {
+            link.classList.add('active');
+          }
+        });
+      });
+    });
+
+    // Intersection observer for animations
+    document.addEventListener('DOMContentLoaded', function() {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.style.animation = 'slide-up 0.6s ease-out forwards';
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.1 });
+
+      document.querySelectorAll('.section').forEach(section => {
+        observer.observe(section);
+      });
+    });
+  </script>
+</body>
+</html>

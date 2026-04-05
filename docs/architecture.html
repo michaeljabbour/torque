@@ -1,0 +1,1791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Torque — Language-Agnostic, Agentic-First Architecture Explorer</title>
+  <meta name="description" content="Interactive exploration of Torque's language-agnostic, agentic-first composable monolith architecture: kernel, services, intents, bundle contract, boot sequence, and framework comparison.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #06060b;
+      --surface: #0c0c14;
+      --elevated: #13131e;
+      --overlay: #1a1a28;
+      --text: #e8e8f0;
+      --subtext: #9898ad;
+      --muted: #5a5a72;
+      --primary: #00d4aa;
+      --primary-hover: #00f0c0;
+      --primary-dim: rgba(0,212,170,0.10);
+      --secondary: #7c6aef;
+      --accent: #f0a030;
+      --blue: #4d9ef6;
+      --red: #ef5f6b;
+      --yellow: #efc944;
+      --pink: #e879a8;
+      --border: #1a1a28;
+      --border-light: #252535;
+      --mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; line-height: 1.6; min-height: 100vh; }
+    a { color: var(--primary); text-decoration: none; transition: color 0.15s; }
+    a:hover { color: var(--primary-hover); }
+
+    /* Navigation */
+    .nav { position: sticky; top: 0; z-index: 200; background: rgba(12,12,20,0.88); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+    .nav__inner { display: flex; align-items: center; justify-content: space-between; height: 60px; max-width: 1400px; margin: 0 auto; padding: 0 24px; }
+    .nav__logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; color: var(--text); text-decoration: none; font-family: var(--sans); }
+    .nav__logo:hover { color: var(--text); }
+    .nav__logo-icon { width: 28px; height: 28px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: var(--bg); font-family: var(--mono); flex-shrink: 0; }
+    .nav__links { display: flex; align-items: center; gap: 4px; list-style: none; }
+    .nav__links a { font-size: 13px; font-weight: 500; color: var(--subtext); text-decoration: none; padding: 8px 14px; border-radius: 6px; transition: all 0.15s; }
+    .nav__links a:hover { color: var(--text); background: var(--overlay); }
+    .nav__links a.active { color: var(--primary); background: var(--primary-dim); }
+    .nav__right { display: flex; align-items: center; gap: 12px; }
+    .nav__github { display: flex; align-items: center; color: var(--subtext); transition: color 0.15s; }
+    .nav__github:hover { color: var(--primary); }
+    .nav__cta { display: inline-flex; align-items: center; padding: 8px 18px; background: var(--primary); color: var(--bg); font-size: 13px; font-weight: 600; border-radius: 6px; text-decoration: none; transition: all 0.2s; }
+    .nav__cta:hover { background: var(--primary-hover); color: var(--bg); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,212,170,0.2); }
+    .nav__hamburger { display: none; background: none; border: none; color: var(--subtext); cursor: pointer; padding: 4px; font-size: 20px; }
+    .mobile-nav { display: none; background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px 20px; }
+    .mobile-nav.open { display: block; }
+    .mobile-nav a { display: block; padding: 10px 4px; font-size: 15px; color: var(--subtext); border-bottom: 1px solid var(--border); text-decoration: none; }
+    .mobile-nav a:last-child { border-bottom: none; }
+    .mobile-nav a:hover { color: var(--text); }
+    @media (max-width: 768px) {
+      .nav__links, .nav__right { display: none; }
+      .nav__hamburger { display: block; }
+    }
+
+    /* Header */
+    .header {
+      padding: 48px 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .header__title {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .header__subtitle {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--subtext);
+    }
+    .header__subtitle span {
+      color: var(--primary);
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 2px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border-light);
+      padding: 0 24px;
+      overflow-x: auto;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .tab {
+      padding: 12px 16px;
+      cursor: pointer;
+      color: var(--subtext);
+      border-bottom: 2px solid transparent;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s;
+      white-space: nowrap;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+    }
+    .tab:hover {
+      color: var(--text);
+      background: var(--overlay);
+    }
+    .tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      background: var(--primary-dim);
+    }
+
+    /* Content */
+    .content {
+      padding: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .panel {
+      display: none;
+    }
+    .panel.active {
+      display: block;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 12px;
+      transition: all 0.15s;
+    }
+    .card:hover {
+      border-color: var(--border);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      transform: translateY(-2px);
+    }
+    .card h3 {
+      font-size: 14px;
+      color: var(--text);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card h3 .badge {
+      font-size: 10px;
+      padding: 3px 7px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .badge-kernel {
+      background: rgba(124,106,239,0.15);
+      color: var(--secondary);
+    }
+    .badge-service {
+      background: rgba(77,158,246,0.15);
+      color: var(--blue);
+    }
+    .badge-released {
+      background: rgba(0,212,170,0.15);
+      color: var(--primary);
+    }
+    .badge-planned {
+      background: rgba(239,160,48,0.15);
+      color: var(--accent);
+    }
+    .card p {
+      color: var(--subtext);
+      font-size: 13px;
+      margin-bottom: 8px;
+      line-height: 1.6;
+    }
+    .card .meta {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      color: var(--subtext);
+      margin-top: 8px;
+    }
+    .card .meta span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .card .meta .label {
+      color: var(--muted);
+    }
+    .card .meta .value {
+      color: var(--text);
+      font-family: var(--mono);
+    }
+
+    /* Diagram */
+    .diagram-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      padding: 24px;
+      overflow-x: auto;
+    }
+    .diagram {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      min-width: 900px;
+    }
+    .layer {
+      display: flex;
+      gap: 12px;
+      align-items: stretch;
+      justify-content: center;
+      width: 100%;
+    }
+    .layer-label {
+      writing-mode: vertical-lr;
+      text-orientation: mixed;
+      transform: rotate(180deg);
+      font-size: 10px;
+      color: var(--subtext);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 8px 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 24px;
+      border-right: 1px solid var(--border-light);
+    }
+    .box {
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      padding: 12px 16px;
+      text-align: center;
+      min-width: 130px;
+      flex: 1;
+      max-width: 200px;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: var(--elevated);
+    }
+    .box:hover {
+      border-color: var(--primary);
+      box-shadow: 0 0 16px rgba(0,212,170,0.2);
+    }
+    .box .name {
+      font-weight: 600;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .box .sub {
+      font-size: 10px;
+      color: var(--subtext);
+    }
+    .box-config {
+      background: rgba(77,158,246,0.08);
+      border-color: rgba(77,158,246,0.3);
+    }
+    .box-config .name {
+      color: var(--blue);
+    }
+    .box-bundle {
+      background: rgba(0,212,170,0.08);
+      border-color: rgba(0,212,170,0.3);
+    }
+    .box-bundle .name {
+      color: var(--primary);
+    }
+    .box-bundle-eg {
+      background: rgba(239,160,48,0.08);
+      border-color: rgba(239,160,48,0.3);
+      border-style: dashed;
+    }
+    .box-bundle-eg .name {
+      color: var(--accent);
+    }
+    .box-kernel {
+      background: rgba(124,106,239,0.08);
+      border-color: rgba(124,106,239,0.3);
+    }
+    .box-kernel .name {
+      color: var(--secondary);
+    }
+    .box-service {
+      background: rgba(0,212,170,0.08);
+      border-color: rgba(0,212,170,0.3);
+    }
+    .box-service .name {
+      color: var(--primary);
+    }
+    .box-storage {
+      background: rgba(77,158,246,0.08);
+      border-color: rgba(77,158,246,0.3);
+    }
+    .box-storage .name {
+      color: var(--blue);
+    }
+    .box-intent {
+      background: rgba(232,121,168,0.08);
+      border-color: rgba(232,121,168,0.3);
+    }
+    .box-intent .name {
+      color: var(--pink);
+    }
+    .connector {
+      display: flex;
+      justify-content: center;
+      color: var(--border);
+      font-size: 12px;
+      line-height: 1;
+    }
+    .connector-wide {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--border);
+      width: 100%;
+      padding: 2px 60px;
+    }
+    .connector-wide .line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+    .connector-wide .label {
+      font-size: 10px;
+      color: var(--subtext);
+      white-space: nowrap;
+    }
+
+    /* Legend */
+    .legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+      font-size: 11px;
+      color: var(--subtext);
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .legend-box {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+      border: 1px solid;
+      flex-shrink: 0;
+    }
+
+    /* Grid */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 12px;
+    }
+
+    /* Tables */
+    .table-wrapper {
+      background: var(--surface);
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    thead tr {
+      background: var(--overlay);
+    }
+    thead th {
+      text-align: left;
+      padding: 10px 12px;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border-light);
+      white-space: nowrap;
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--border-light);
+      transition: background 0.12s;
+    }
+    tbody tr:last-child {
+      border-bottom: none;
+    }
+    tbody tr:hover {
+      background: rgba(0,212,170,0.03);
+    }
+    tbody td {
+      padding: 10px 12px;
+      color: var(--text);
+    }
+    tbody td.torque-highlight {
+      background: rgba(0,212,170,0.06);
+      color: var(--primary);
+    }
+
+    /* Section header */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 24px 0 12px 0;
+      color: var(--subtext);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .section-header:first-child {
+      margin-top: 0;
+    }
+    .section-header::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border-light);
+    }
+
+    /* Tooltip */
+    .tooltip {
+      position: fixed;
+      background: var(--overlay);
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 12px;
+      max-width: 360px;
+      z-index: 200;
+      pointer-events: none;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      display: none;
+    }
+    .tooltip .tt-title {
+      color: var(--primary);
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .tooltip .tt-desc {
+      color: var(--subtext);
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+    .tooltip .tt-detail {
+      color: var(--text);
+      font-size: 11px;
+      font-family: var(--mono);
+    }
+
+    /* Boot sequence */
+    .boot-step {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .boot-step:last-child {
+      border-bottom: none;
+    }
+    .boot-num {
+      color: var(--primary);
+      font-weight: 700;
+      min-width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--primary);
+      border-radius: 50%;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+    .boot-body h4 {
+      color: var(--text);
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+    .boot-body p {
+      color: var(--subtext);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .boot-body code {
+      background: var(--overlay);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+      color: var(--accent);
+      font-family: var(--mono);
+    }
+
+    /* Code blocks */
+    pre {
+      background: var(--overlay);
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      padding: 16px;
+      overflow-x: auto;
+      font-size: 12px;
+      line-height: 1.6;
+      margin: 12px 0;
+      font-family: var(--mono);
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      color: var(--text);
+      font-size: inherit;
+    }
+    .t-key { color: var(--blue); }
+    .t-str { color: var(--primary); }
+    .t-num { color: var(--accent); }
+    .t-bool { color: var(--secondary); }
+    .t-kw { color: var(--secondary); }
+    .t-cls { color: var(--accent); }
+    .t-type { color: var(--primary); }
+    .t-punct { color: var(--muted); }
+    .t-muted { color: var(--muted); }
+    .t-comment { color: var(--subtext); font-style: italic; }
+
+    /* File tree */
+    .file-tree {
+      background: var(--overlay);
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      padding: 16px 20px;
+      font-size: 12px;
+      line-height: 2;
+      font-family: var(--mono);
+      white-space: pre;
+    }
+    .ft-dir {
+      color: var(--blue);
+      font-weight: 600;
+    }
+    .ft-file {
+      color: var(--text);
+    }
+    .ft-file .ft-ext {
+      color: var(--subtext);
+    }
+    .ft-desc {
+      color: var(--subtext);
+      font-size: 11px;
+      margin-left: 12px;
+    }
+
+    /* Comparison */
+    .comparison-intro {
+      background: var(--surface);
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .comparison-intro p {
+      color: var(--subtext);
+      margin-bottom: 8px;
+    }
+    .comparison-intro p:last-child {
+      margin-bottom: 0;
+    }
+    .comparison-table {
+      margin-bottom: 24px;
+    }
+    .comparison-table h4 {
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .key-insight {
+      background: var(--elevated);
+      border: 1px solid var(--primary);
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 24px;
+    }
+    .key-insight h4 {
+      color: var(--primary);
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .key-insight p {
+      color: var(--subtext);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .card-grid {
+        grid-template-columns: 1fr;
+      }
+      .diagram-wrap {
+        overflow-x: auto;
+      }
+      .tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav__inner">
+    <a href="index.html" class="nav__logo">
+      <div class="nav__logo-icon">T</div>
+      <span>Torque</span>
+    </a>
+    <div class="nav__links">
+      <a href="index.html">Docs</a>
+      <a href="tutorial.html">Tutorial</a>
+      <a href="architecture.html" class="active">Architecture</a>
+      <a href="index.html#intents">Intents</a>
+    </div>
+    <div class="nav__right">
+      <a href="https://github.com/torque-framework/torque" target="_blank" class="nav__github">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+      </a>
+      <a href="index.html#getting-started" class="nav__cta">Get Started</a>
+      <button class="nav__hamburger" onclick="toggleMobileNav()" aria-label="Toggle menu">☰</button>
+    </div>
+  </div>
+  <div class="mobile-nav" id="mobile-nav">
+    <a href="index.html">Docs</a>
+    <a href="tutorial.html">Tutorial</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="index.html#intents">Intents</a>
+    <a href="index.html#getting-started">Get Started</a>
+  </div>
+</nav>
+
+<!-- HEADER -->
+<div class="header">
+  <h1 class="header__title">Torque Architecture Explorer</h1>
+  <div class="header__subtitle"><span>~/dev/torque</span> $ architecture --explorer &nbsp;// language-agnostic, agentic-first</div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active" data-panel="diagram">Composition Diagram</button>
+  <button class="tab" data-panel="kernel">The Kernel</button>
+  <button class="tab" data-panel="services">Services</button>
+  <button class="tab" data-panel="bundle-contract">Bundle Contract</button>
+  <button class="tab" data-panel="boot">Boot Sequence</button>
+  <button class="tab" data-panel="intents">Intent Layer</button>
+  <button class="tab" data-panel="comparison">Framework Comparison</button>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+<!-- ======================== TAB 1: COMPOSITION DIAGRAM ======================== -->
+<div class="panel active" id="panel-diagram">
+  <div class="diagram-wrap">
+    <div class="diagram">
+
+      <!-- Config Layer -->
+      <div class="layer">
+        <div class="layer-label">Config</div>
+        <div class="box box-config" style="max-width:640px;flex:none;width:100%"
+             data-tip="Mount Plan (YAML)|The application IS a YAML file. Declares which bundles are active, how they are configured, what behaviors load, and what context is available. Changing the app means editing this file.|config/mount_plans/production.yml">
+          <div class="name">Mount Plan (YAML)</div>
+          <div class="sub">mount_plan.yml — the application definition</div>
+        </div>
+      </div>
+
+      <div class="connector">↓</div>
+      <div class="connector-wide">
+        <div class="line"></div><div class="label">mount plan resolves & boots</div><div class="line"></div>
+      </div>
+      <div class="connector">↓</div>
+
+      <!-- Bundle Layer -->
+      <div class="layer">
+        <div class="layer-label">Bundles</div>
+        <div class="box box-bundle"
+             data-tip="your-bundle-a|A bundle is a repo with manifest.yml, logic.js, and optional intents/. The manifest declares the contract. logic.js implements it and exposes Intents. The kernel reads the manifest and discovers intents before any code runs.|manifest.yml, logic.js, intents/">
+          <div class="name">your-bundle-a</div>
+          <div class="sub">manifest.yml · logic.js · intents/</div>
+        </div>
+        <div class="box box-bundle"
+             data-tip="your-bundle-b|Bundles are isolated compute units. Each declares tables, events, interfaces, routes in manifest.yml, and optionally Intents via intents(). No direct imports — coordinator.call() is the only cross-bundle path.|manifest.yml, logic.js, intents/">
+          <div class="name">your-bundle-b</div>
+          <div class="sub">manifest.yml · logic.js · intents/</div>
+        </div>
+        <div class="box box-bundle"
+             data-tip="your-bundle-c|Each bundle receives four injected dependencies: data, events, config, coordinator. Intents add a fifth surface: Context (data boundary), Behavior (guardrails), Intent (goals). The kernel compiles Intents into dual-interface APIs.|manifest.yml, logic.js, intents/">
+          <div class="name">your-bundle-c</div>
+          <div class="sub">manifest.yml · logic.js · intents/</div>
+        </div>
+        <div class="box box-bundle-eg"
+             data-tip="your-bundle-d (example)|Adding a bundle is a single line in the mount plan. The composability invariant: adding this bundle produces zero git diff in every other repo. Tables, routes, and event subscriptions wire automatically.|manifest.yml, logic.js">
+          <div class="name">your-bundle-d</div>
+          <div class="sub">one line in mount plan</div>
+        </div>
+      </div>
+
+      <div class="connector">↓</div>
+      <div class="connector-wide">
+        <div class="line"></div>
+        <div class="label">bundles declare intents in logic.js — Registry discovers at boot</div>
+        <div class="line"></div>
+      </div>
+      <div class="connector">↓</div>
+
+      <!-- Intent Layer -->
+      <div class="layer">
+        <div class="layer-label">Intent</div>
+        <div class="box box-intent"
+             data-tip="Context / Behavior / Intent|Each bundle exports an intents() method returning Intent objects. Intents declare name, input schema, handler, and description. The Registry calls instance.intents() at boot and stores them as runtime metadata.|logic.js — intents() method">
+          <div class="name">Context / Behavior / Intent</div>
+          <div class="sub">bundle.intents() declarations</div>
+        </div>
+        <div class="box box-intent"
+             data-tip="AgentRouter|Routes incoming intent invocations to the correct bundle handler. Resolves POST /api/intents/{bundle}/{intent} at runtime. Also exposes tool schemas for AI agents.|@torquedev/core — kernel/agent-router.js">
+          <div class="name">AgentRouter</div>
+          <div class="sub">intent dispatch & tool schema</div>
+        </div>
+        <div class="box box-intent"
+             data-tip="HookBus Lifecycle Events|The HookBus emits intent lifecycle events: intent_received (before dispatch), executing (handler running), intent_invoked (after completion). Gates can abort intent execution.|intent_received → executing → intent_invoked">
+          <div class="name">HookBus Lifecycle</div>
+          <div class="sub">intent_received · executing · intent_invoked</div>
+        </div>
+      </div>
+
+      <div class="connector">↓</div>
+      <div class="connector-wide">
+        <div class="line"></div>
+        <div class="label">kernel injects { data, events, config, coordinator } into each bundle at boot</div>
+        <div class="line"></div>
+      </div>
+      <div class="connector">↓</div>
+
+      <!-- Kernel Layer -->
+      <div class="layer">
+        <div class="layer-label">Kernel</div>
+        <div class="box box-kernel"
+             data-tip="Registry|Bundle lifecycle manager. Reads mount plan, boots bundles in dependency order, wires interfaces, cross-references manifest declarations against implementations.|@torquedev/core — kernel/registry.js">
+          <div class="name">Registry</div>
+          <div class="sub">boot & interface wiring</div>
+        </div>
+        <div class="box box-kernel"
+             data-tip="Resolver|Resolves bundle sources — git repos, local paths, or bare names. Handles ENV var interpolation, topological dependency ordering, circular dep detection, and bundle.lock pinning.|@torquedev/core — kernel/resolver.js">
+          <div class="name">Resolver</div>
+          <div class="sub">source resolution & lock</div>
+        </div>
+        <div class="box box-kernel"
+             data-tip="HookBus|Lifecycle hook system. Observers fire-and-forget. Gates can abort by throwing. Hook positions: bundle:before/after-boot, interface:gate/before/after/error, route:before/after/error, event:before/after-publish.|@torquedev/core — kernel/hooks.js">
+          <div class="name">HookBus</div>
+          <div class="sub">lifecycle hooks & gates</div>
+        </div>
+        <div class="box box-kernel"
+             data-tip="ScopedCoordinator|Each bundle gets a ScopedCoordinator scoped to its depends_on + optional_deps. Calling an undeclared bundle throws DependencyViolationError at runtime — not a lint warning, a hard failure.|@torquedev/core — kernel/coordinator.js">
+          <div class="name">ScopedCoordinator</div>
+          <div class="sub">runtime dep enforcement</div>
+        </div>
+      </div>
+
+      <div class="connector">↓</div>
+      <div class="connector-wide">
+        <div class="line"></div>
+        <div class="label">shared services — singletons provided to all bundles</div>
+        <div class="line"></div>
+      </div>
+      <div class="connector">↓</div>
+
+      <!-- Services Layer -->
+      <div class="layer">
+        <div class="layer-label">Services</div>
+        <div class="box box-service"
+             data-tip="DataLayer|SQLite via better-sqlite3. WAL mode. Auto-provisions tables from manifest schemas. Per-bundle table isolation enforced at runtime. BundleIsolationError on cross-bundle access.|@torquedev/datalayer">
+          <div class="name">DataLayer</div>
+          <div class="sub">SQLite + bundle isolation</div>
+        </div>
+        <div class="box box-service"
+             data-tip="EventBus|Pub/sub with durable persistence to _kernel_events. In-memory ring buffer (200) + SQLite append. Synchronous fan-out. Payload validation against manifest event schemas.|@torquedev/eventbus">
+          <div class="name">EventBus</div>
+          <div class="sub">pub/sub + durable log</div>
+        </div>
+        <div class="box box-service"
+             data-tip="Server|Express HTTP server. Auto-registers all bundle routes from manifests at boot. System endpoints: /health, /api/manifest, /api/events, /api/introspect.|@torquedev/server">
+          <div class="name">Server</div>
+          <div class="sub">Express + auto-routes</div>
+        </div>
+      </div>
+
+      <div class="connector">↓</div>
+      <div class="connector-wide">
+        <div class="line"></div>
+        <div class="label">single-file persistence — WAL mode — {bundle}_{table} prefix</div>
+        <div class="line"></div>
+      </div>
+      <div class="connector">↓</div>
+
+      <!-- Storage Layer -->
+      <div class="layer">
+        <div class="layer-label">Storage</div>
+        <div class="box box-storage" style="max-width:640px;flex:none;width:100%"
+             data-tip="SQLite (better-sqlite3)|Single-file database. WAL mode for concurrent reads. All bundle tables prefixed {bundle}_{table}. _kernel_events table for durable event log. Created automatically if file does not exist.|data/app.sqlite3">
+          <div class="name">SQLite</div>
+          <div class="sub">better-sqlite3 · WAL mode · single-file · {bundle}_{table} prefix</div>
+        </div>
+      </div>
+
+    </div><!-- /diagram -->
+  </div><!-- /diagram-wrap -->
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-box" style="background: rgba(0,212,170,0.08); border-color: rgba(0,212,170,0.3);"></div>
+      <span>Bundle</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-box" style="background: rgba(239,160,48,0.08); border-color: rgba(239,160,48,0.3); border-style: dashed;"></div>
+      <span>Bundle (add via one mount plan line)</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-box" style="background: rgba(232,121,168,0.08); border-color: rgba(232,121,168,0.3);"></div>
+      <span>Intent layer</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-box" style="background: rgba(124,106,239,0.08); border-color: rgba(124,106,239,0.3);"></div>
+      <span>Kernel module</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-box" style="background: rgba(77,158,246,0.08); border-color: rgba(77,158,246,0.3);"></div>
+      <span>Service / Storage</span>
+    </div>
+    <div class="legend-item" style="margin-left: 8px;">
+      <span>Hover boxes for details ↑</span>
+    </div>
+  </div>
+</div><!-- /panel-diagram -->
+
+<!-- ======================== TAB 2: THE KERNEL ======================== -->
+<div class="panel" id="panel-kernel">
+  <div class="section-header">The Kernel — <code style="color:var(--secondary);font-size:11px">@torquedev/core</code></div>
+  <div class="card" style="margin-bottom:16px">
+    <p style="color:var(--text);">The kernel provides mechanisms, not policies. It resolves bundles, boots them, routes requests, enforces isolation, discovers Intents, and compiles them into dual-interface APIs and Agent Tool Schemas. It has zero business logic — no knowledge of domains or application-specific concepts. Business logic lives in bundles. Intent constraints live in bundles. The kernel enforces both.</p>
+  </div>
+
+  <div class="card-grid">
+    <!-- Registry -->
+    <div class="card">
+      <h3>Registry <span class="badge badge-kernel">kernel</span></h3>
+      <p>Bundle lifecycle manager — loads bundles in dependency order, wires interfaces, discovers Intents via <code>instance.intents()</code>, cross-references manifest declarations against implementations, and holds all booted bundle state including Intent runtime metadata.</p>
+      <div class="meta">
+        <span><span class="label">package:</span><span class="value">@torquedev/core</span></span>
+        <span><span class="label">file:</span><span class="value">kernel/registry.js</span></span>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">Constructor:</div>
+        <code>new Registry({ dataLayer, eventBus, createScopedData, hookBus })</code>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">Key methods:</div>
+        <code>boot(mountPlanPath, { sorted, bundleDirs })</code> — load plan, boot in dep order<br>
+        <code>call(bundleName, interfaceName, args)</code> — cross-bundle interface routing<br>
+        <code>activeBundles()</code> — array of booted bundle names<br>
+        <code>bundleInstance(name)</code> — the instantiated bundle class<br>
+        <code>bundleManifest(name)</code> — the parsed manifest object<br>
+        <code>bundleDir(name)</code> — filesystem path for a bundle<br>
+        <code>bundles[name].intents</code> — registered Intent objects (runtime metadata)
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">Validation modes:</div>
+        <code>validation.contracts</code>: <code>warn</code> (default) or <code>strict</code><br>
+        <code>validation.events</code>: <code>warn</code> (default) or <code>strict</code><br>
+        Strict mode throws <code>ContractViolationError</code> on mismatch
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">Interface call routing:</div>
+        1. Look up handler in interface map<br>
+        2. Run <code>interface:gate</code> hook (can abort by throwing)<br>
+        3. Fire <code>interface:before-call</code> hook (observer)<br>
+        4. Execute handler function<br>
+        5. Validate return value vs. manifest <code>output.shape</code><br>
+        6. Fire <code>interface:after-call</code> hook<br>
+        7. On error: fire <code>interface:error</code>, re-throw
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">Intent discovery:</div>
+        1. Call <code>instance.intents()</code> on each booted bundle<br>
+        2. Store Intent objects as runtime metadata in <code>bundles[name].intents</code><br>
+        3. Server auto-registers <code>POST /api/intents/{bundle}/{intent}</code><br>
+        4. HookBus emits <code>idd:intent_received</code>, <code>idd:executing</code>, <code>idd:intent_invoked</code>
+      </div>
+    </div>
+
+    <!-- Resolver -->
+    <div class="card">
+      <h3>Resolver <span class="badge badge-kernel">kernel</span></h3>
+      <p>Resolves bundle sources from git repos, local paths, or bare names. Handles ENV var interpolation, topological dependency sorting, circular dependency detection, and lock file management.</p>
+      <div class="meta">
+        <span><span class="label">package:</span><span class="value">@torquedev/core</span></span>
+        <span><span class="label">file:</span><span class="value">kernel/resolver.js</span></span>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">Source types:</div>
+        <strong style="color:var(--text);">Bare name</strong> — checks <code>bundles/&lt;name&gt;/</code>, then <code>.bundles/&lt;name&gt;/</code><br>
+        <strong style="color:var(--text);">Path</strong> — <code>path:./relative/dir</code> resolved from app root or plan dir<br>
+        <strong style="color:var(--text);">Git</strong> — <code>git+https://...</code> clones to <code>.bundles/</code> cache; pinned via <code>bundle.lock</code>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">ENV interpolation:</div>
+        <code>${VAR_NAME}</code> — required, throws if unset<br>
+        <code>${?VAR_NAME}</code> — optional, resolves to empty string
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">Static methods:</div>
+        <code>Resolver.interpolateEnv(yamlString)</code><br>
+        <code>Resolver.loadMountPlan(path)</code> — loads + interpolates + parses
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">Circular dependency detection:</div>
+        <code>CircularDependencyError: Circular dependency detected: A → B → A</code><br>
+        Boot aborts. All cycles must be resolved before the app can start.
+      </div>
+    </div>
+
+    <!-- HookBus -->
+    <div class="card">
+      <h3>HookBus <span class="badge badge-kernel">kernel</span></h3>
+      <p>Lifecycle hook system for audit logging, tracing, rate limiting, metrics, and custom middleware. Two categories: observers (fire-and-forget, errors swallowed) and gates (can abort execution by throwing).</p>
+      <div class="meta">
+        <span><span class="label">package:</span><span class="value">@torquedev/core</span></span>
+        <span><span class="label">file:</span><span class="value">kernel/hooks.js</span></span>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">Bundle lifecycle:</div>
+        <code>bundle:before-boot</code> / <code>bundle:after-boot</code>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">Interface hooks:</div>
+        <code>interface:gate</code> — throws to abort call<br>
+        <code>interface:before-call</code> / <code>interface:after-call</code> / <code>interface:error</code>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">Route hooks:</div>
+        <code>route:before</code> / <code>route:after</code> / <code>route:error</code>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">Event hooks:</div>
+        <code>event:before-publish</code> / <code>event:after-publish</code>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">Usage:</div>
+        <code>hookBus.register('interface:before-call', ctx => log(ctx))</code><br>
+        <code>hookBus.registerGate('interface:gate', ctx => checkAuth(ctx))</code>
+      </div>
+    </div>
+
+    <!-- ScopedCoordinator -->
+    <div class="card">
+      <h3>ScopedCoordinator <span class="badge badge-kernel">kernel</span></h3>
+      <p>Each bundle receives a ScopedCoordinator instead of direct registry access. Restricts cross-bundle calls to bundles declared in <code>depends_on</code> and <code>optional_deps</code>. Runtime enforcement — not a linter warning, a hard throw.</p>
+      <div class="meta">
+        <span><span class="label">package:</span><span class="value">@torquedev/core</span></span>
+        <span><span class="label">file:</span><span class="value">kernel/coordinator.js</span></span>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">Constructor & API:</div>
+        <code>new ScopedCoordinator(registry, bundleName, allowedBundles)</code><br>
+        <code>async call(targetBundle, interfaceName, args = {})</code>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">On unauthorized call:</div>
+        <pre style="margin:4px 0;padding:8px;font-size:10px;line-height:1.5;background:var(--overlay);">DependencyViolationError:
+Bundle 'analytics' cannot call 'billing.getInvoice':
+'billing' is not in depends_on or optional_deps.
+Declared dependencies: [identity, pipeline]</pre>
+      </div>
+    </div>
+  </div><!-- /card-grid -->
+
+  <div class="section-header">Runtime Error Classes</div>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Error Class</th><th>Thrown By</th><th>When</th></tr></thead>
+      <tbody>
+        <tr><td style="color:var(--red);">BundleIsolationError</td><td>DataLayer</td><td>A bundle accesses a table not declared in its manifest</td></tr>
+        <tr><td style="color:var(--red);">DependencyViolationError</td><td>ScopedCoordinator</td><td>A bundle calls a bundle not in its <code>depends_on</code> / <code>optional_deps</code></td></tr>
+        <tr><td style="color:var(--red);">CircularDependencyError</td><td>Resolver</td><td>The <code>depends_on</code> graph contains a cycle (detected at boot)</td></tr>
+        <tr><td style="color:var(--red);">ContractViolationError</td><td>Registry, EventBus</td><td>Manifest–implementation mismatch (strict validation mode only)</td></tr>
+        <tr><td style="color:var(--red);">BundleNotFoundError</td><td>Registry</td><td><code>loadBundle()</code> cannot find <code>manifest.yml</code> at the expected path</td></tr>
+        <tr><td style="color:var(--red);">InterfaceNotFoundError</td><td>Registry</td><td><code>call()</code> targets an interface not registered by the bundle</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div><!-- /panel-kernel -->
+
+<!-- ======================== TAB 3: SERVICES ======================== -->
+<div class="panel" id="panel-services">
+  <div class="section-header">Services — <code style="color:var(--primary);font-size:11px;">shared singletons</code></div>
+  <div class="card" style="margin-bottom:16px">
+    <p style="color:var(--text);">Three core services are provisioned at boot and injected into all bundles. Services are singletons — one instance per app. They coordinate bundle isolation, asynchronous messaging, and HTTP routing.</p>
+  </div>
+
+  <div class="card-grid">
+    <!-- DataLayer -->
+    <div class="card">
+      <h3>DataLayer <span class="badge badge-service">service</span></h3>
+      <p>SQLite via better-sqlite3. WAL mode for concurrent reads. Auto-provisions tables from manifest schemas. Per-bundle table isolation enforced at runtime — attempting cross-bundle table access throws <code>BundleIsolationError</code>.</p>
+      <div class="meta">
+        <span><span class="label">package:</span><span class="value">@torquedev/datalayer</span></span>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">Isolation model:</div>
+        Tables are prefixed <code>{bundleName}_{tableName}</code>. A bundle receives a <code>BundleScopedData</code> instance that filters all queries to its own tables. No direct SQL access.
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">BundleScopedData API:</div>
+        <table style="margin-top:6px;width:100%;font-size:10px;">
+          <tr style="border-bottom:1px solid var(--border-light);">
+            <td style="color:var(--primary);padding:2px 0;">insert(table, row)</td>
+            <td style="color:var(--subtext);">Insert one row, return last insert id</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-light);">
+            <td style="color:var(--primary);padding:2px 0;">find(table, id)</td>
+            <td style="color:var(--subtext);">Find by primary key</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-light);">
+            <td style="color:var(--primary);padding:2px 0;">query(table, where)</td>
+            <td style="color:var(--subtext);">Query with optional WHERE object</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-light);">
+            <td style="color:var(--primary);padding:2px 0;">update(table, id, changes)</td>
+            <td style="color:var(--subtext);">Update by primary key</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-light);">
+            <td style="color:var(--primary);padding:2px 0;">delete(table, id)</td>
+            <td style="color:var(--subtext);">Delete by primary key</td>
+          </tr>
+          <tr>
+            <td style="color:var(--primary);padding:2px 0;">count(table)</td>
+            <td style="color:var(--subtext);">Count rows in table</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- EventBus -->
+    <div class="card">
+      <h3>EventBus <span class="badge badge-service">service</span></h3>
+      <p>Pub/sub with durable persistence. Synchronous fan-out to all subscribers. In-memory ring buffer (200 events) + SQLite append log. Payload validation against manifest event schemas.</p>
+      <div class="meta">
+        <span><span class="label">package:</span><span class="value">@torquedev/eventbus</span></span>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">Design principles:</div>
+        <strong style="color:var(--text);">Durable</strong> — persists to <code>_kernel_events</code> SQLite table<br>
+        <strong style="color:var(--text);">Ordered</strong> — events published in strict order<br>
+        <strong style="color:var(--text);">Synchronous</strong> — all subscribers execute before publish() returns<br>
+        <strong style="color:var(--text);">Validated</strong> — payload shape checked against manifest
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">API:</div>
+        <table style="margin-top:6px;width:100%;font-size:10px;">
+          <tr style="border-bottom:1px solid var(--border-light);">
+            <td style="color:var(--primary);padding:2px 0;">publish(eventName, payload)</td>
+            <td style="color:var(--subtext);">Publish and persist event</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-light);">
+            <td style="color:var(--primary);padding:2px 0;">subscribe(eventName, handler)</td>
+            <td style="color:var(--subtext);">Subscribe to event, returns unsubscribe()</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-light);">
+            <td style="color:var(--primary);padding:2px 0;">recentEvents(limit)</td>
+            <td style="color:var(--subtext);">Recent events from memory buffer</td>
+          </tr>
+          <tr>
+            <td style="color:var(--primary);padding:2px 0;">queryEvents(where)</td>
+            <td style="color:var(--subtext);">Query persisted events with WHERE clause</td>
+          </tr>
+        </table>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">_kernel_events schema:</div>
+        <code>id, eventName, bundleName, payload (JSON), timestamp, sequence</code>
+      </div>
+    </div>
+
+    <!-- Server -->
+    <div class="card">
+      <h3>Server <span class="badge badge-service">service</span></h3>
+      <p>Express HTTP server. Auto-registers all bundle routes from manifests at boot. Exposes system endpoints for health, introspection, and event history. Route handlers receive (req, res, { data, events, config, coordinator }).</p>
+      <div class="meta">
+        <span><span class="label">package:</span><span class="value">@torquedev/server</span></span>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">Auto-wiring:</div>
+        At boot, the Server reads <code>routes[]</code> from all active bundle manifests. Each route is registered as <code>app[method](path, bundleHandler)</code>. Path and method come from manifest; handler is resolved from bundle logic.js.
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">System endpoints:</div>
+        <code>GET /health</code> — server status<br>
+        <code>GET /api/manifest</code> — all active bundle manifests<br>
+        <code>GET /api/events</code> — recent event log<br>
+        <code>GET /api/introspect</code> — bundle names, interfaces, routes
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--primary);margin-bottom:6px;font-weight:500;">Route handler contract:</div>
+        <pre style="margin:4px 0;padding:8px;font-size:10px;line-height:1.5;background:var(--overlay);">async handler(req, res, {
+  data: BundleScopedData,
+  events: EventBus,
+  config: object,
+  coordinator: ScopedCoordinator
+})</pre>
+      </div>
+    </div>
+  </div><!-- /card-grid -->
+</div><!-- /panel-services -->
+
+<!-- ======================== TAB 4: BUNDLE CONTRACT ======================== -->
+<div class="panel" id="panel-bundle-contract">
+  <div class="section-header">Bundle Structure & Manifest Contract</div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+    <!-- File Tree -->
+    <div class="card">
+      <h3 style="margin-bottom:12px;">Bundle File Tree</h3>
+      <div class="file-tree"><span class="ft-dir">your-bundle/</span>
+├── <span class="ft-file">manifest.yml</span>      <span class="ft-desc">contract &amp; schema</span>
+├── <span class="ft-file">logic.js</span>          <span class="ft-desc">implementation + intents()</span>
+├── <span class="ft-file">agent.md</span>          <span class="ft-desc">AI context (optional)</span>
+├── <span class="ft-file">package.json</span>      <span class="ft-desc">npm metadata</span>
+├── <span class="ft-dir">test/</span>
+│   └── <span class="ft-file">your-bundle.test.js</span>
+├── <span class="ft-dir">ui/</span>               <span class="ft-desc">(optional)</span>
+│   ├── <span class="ft-file">index.js</span>      <span class="ft-desc">view routes</span>
+│   └── <span class="ft-file">ui-kit.js</span>     <span class="ft-desc">descriptor helpers</span>
+└── <span class="ft-dir">intents/</span>          <span class="ft-desc">(optional)</span>
+    ├── <span class="ft-dir">OrganizeWork/</span>
+    │   ├── <span class="ft-file">context.js</span>    <span class="ft-desc">data boundary + vectorize</span>
+    │   ├── <span class="ft-file">behavior.js</span>   <span class="ft-desc">guardrails + allowed tools</span>
+    │   └── <span class="ft-file">intent.js</span>     <span class="ft-desc">goal + success criteria</span>
+    └── <span class="ft-dir">SummarizeBoard/</span>
+        ├── <span class="ft-file">context.js</span>
+        ├── <span class="ft-file">behavior.js</span>
+        └── <span class="ft-file">intent.js</span></div>
+      <p style="margin-top:12px;color:var(--subtext);font-size:12px;"><strong style="color:var(--text);">Manifest + Logic + Intents.</strong> The manifest declares tables, events, interfaces, and routes. The logic.js implements those contracts and exposes Intents via <code>intents()</code>. Each Intent is a triplet of Context (what data), Behavior (what guardrails), and Intent (what goal). The kernel discovers them at boot and auto-registers dual-interface APIs.</p>
+    </div>
+
+    <!-- Logic Skeleton -->
+    <div class="card">
+      <h3 style="margin-bottom:12px;">logic.js Skeleton</h3>
+      <pre><span class="t-kw">import</span> { <span class="t-cls">MyIntent</span> } <span class="t-kw">from</span> <span class="t-str">'./intents/MyIntent/intent.js'</span>;
+
+<span class="t-kw">export</span> <span class="t-kw">default</span> <span class="t-kw">class</span> <span class="t-cls">YourBundle</span> {
+  <span class="t-fn">constructor</span>({ <span class="t-key">data</span>, <span class="t-key">events</span>,
+    <span class="t-key">config</span>, <span class="t-key">coordinator</span> }) {
+    <span class="t-kw">this</span>.data = data;
+    <span class="t-kw">this</span>.events = events;
+    <span class="t-kw">this</span>.coordinator = coordinator;
+  }
+
+  <span class="t-muted">// Intent-Driven — discovered at boot</span>
+  <span class="t-fn">intents</span>() {
+    <span class="t-kw">return</span> { <span class="t-cls">MyIntent</span> };
+  }
+
+  <span class="t-muted">// Cross-bundle interfaces</span>
+  <span class="t-fn">interfaces</span>() {
+    <span class="t-kw">return</span> {
+      <span class="t-key">greet</span>: () => <span class="t-str">"hello"</span>,
+    };
+  }
+
+  <span class="t-fn">routes</span>() { <span class="t-muted">/* ... */</span> }
+  <span class="t-fn">setupSubscriptions</span>(eb) { <span class="t-muted">/* ... */</span> }
+}</pre>
+      <p style="margin-top:12px;color:var(--subtext);font-size:12px;"><strong style="color:var(--text);">Three surfaces:</strong> <code>intents()</code> exposes Intent objects — compiled into dual-interface APIs automatically. <code>interfaces()</code> exposes cross-bundle calls via <code>coordinator.call()</code>. <code>routes()</code> exposes HTTP handlers. All three are discovered by the kernel at boot.</p>
+    </div>
+  </div>
+
+  <!-- Manifest Example -->
+  <div class="card">
+    <h3 style="margin-bottom:12px;">manifest.yml — Complete Example</h3>
+    <pre><span class="t-key">name</span>: your-bundle
+<span class="t-key">depends_on</span>:
+  - auth-bundle
+<span class="t-key">optional_deps</span>:
+  - analytics-bundle
+
+<span class="t-key">config</span>:
+  <span class="t-key">schema</span>:
+    <span class="t-key">databaseUrl</span>:
+      <span class="t-key">type</span>: string
+      <span class="t-key">required</span>: <span class="t-bool">true</span>
+    <span class="t-key">apiKey</span>:
+      <span class="t-key">type</span>: string
+      <span class="t-key">required</span>: <span class="t-bool">false</span>
+
+<span class="t-key">tables</span>:
+  <span class="t-key">users</span>:
+    <span class="t-key">schema</span>:
+      <span class="t-key">id</span>: <span class="t-type">INTEGER PRIMARY KEY</span>
+      <span class="t-key">name</span>: <span class="t-type">TEXT NOT NULL</span>
+      <span class="t-key">email</span>: <span class="t-type">TEXT UNIQUE</span>
+
+<span class="t-key">events</span>:
+  <span class="t-key">user:created</span>:
+    <span class="t-key">schema</span>:
+      <span class="t-key">userId</span>: <span class="t-type">number</span>
+      <span class="t-key">email</span>: <span class="t-type">string</span>
+  <span class="t-key">user:deleted</span>:
+    <span class="t-key">schema</span>:
+      <span class="t-key">userId</span>: <span class="t-type">number</span>
+
+<span class="t-key">interfaces</span>:
+  <span class="t-key">getUser</span>:
+    <span class="t-key">input</span>: { <span class="t-key">userId</span>: <span class="t-type">number</span> }
+    <span class="t-key">output</span>:
+      <span class="t-key">shape</span>: { <span class="t-key">id</span>: <span class="t-type">number</span>, <span class="t-key">name</span>: <span class="t-type">string</span> }
+  <span class="t-key">createUser</span>:
+    <span class="t-key">input</span>: { <span class="t-key">name</span>: <span class="t-type">string</span>, <span class="t-key">email</span>: <span class="t-type">string</span> }
+    <span class="t-key">output</span>:
+      <span class="t-key">shape</span>: { <span class="t-key">id</span>: <span class="t-type">number</span> }
+
+<span class="t-key">routes</span>:
+  - <span class="t-key">method</span>: GET
+    <span class="t-key">path</span>: /users/:id
+    <span class="t-key">handler</span>: getUser
+  - <span class="t-key">method</span>: POST
+    <span class="t-key">path</span>: /users
+    <span class="t-key">handler</span>: createUser
+
+<span class="t-muted"># Intents are declared in logic.js via intents(),</span>
+<span class="t-muted"># not in the manifest. Each intent is a triplet:</span>
+<span class="t-muted">#</span>
+<span class="t-muted"># intents/ResolveIssue/</span>
+<span class="t-muted">#   context.js    — Context({ schema, vectorize })</span>
+<span class="t-muted">#   behavior.js   — Behavior({ persona, allowedTools,</span>
+<span class="t-muted">#                     requireHumanConfirmation })</span>
+<span class="t-muted">#   intent.js     — Intent({ name, trigger,</span>
+<span class="t-muted">#                     successCriteria, behavior })</span>
+<span class="t-muted">#</span>
+<span class="t-muted"># The kernel auto-registers:</span>
+<span class="t-muted">#   POST /api/intents/your-bundle/ResolveIssue</span></pre>
+
+    <div style="margin-top:16px;padding:12px;background:var(--overlay);border-radius:6px;border:1px solid var(--border-light);">
+      <strong style="color:var(--primary);">Manifest sections explained:</strong>
+      <ul style="margin-top:8px;color:var(--subtext);font-size:12px;line-height:1.8;margin-left:16px;">
+        <li><code style="color:var(--accent);">name</code> — Bundle identifier (kebab-case)</li>
+        <li><code style="color:var(--accent);">depends_on</code> — Required bundles; error if missing at boot</li>
+        <li><code style="color:var(--accent);">optional_deps</code> — Optional bundles; <code>coordinator.call()</code> will error if not declared here</li>
+        <li><code style="color:var(--accent);">config.schema</code> — Configuration fields and their types; kernel injects config satisfying this schema</li>
+        <li><code style="color:var(--accent);">tables</code> — SQLite table definitions; prefixed with <code>{bundleName}_{tableName}</code> at boot</li>
+        <li><code style="color:var(--accent);">events</code> — Event schemas this bundle publishes; validated by EventBus.publish()</li>
+        <li><code style="color:var(--accent);">interfaces</code> — Functions other bundles can call via <code>coordinator.call()</code>; full input/output validation</li>
+        <li><code style="color:var(--accent);">routes</code> — HTTP endpoints; auto-registered by Server at boot; method + path + handler name</li>
+        <li><code style="color:var(--accent);">intents()</code> — <em>(in logic.js, not manifest)</em> Returns Intent objects; kernel auto-registers <code>POST /api/intents/{bundle}/{intent}</code> and compiles to Agent Tool Schemas</li>
+      </ul>
+    </div>
+  </div>
+</div><!-- /panel-bundle-contract -->
+
+<!-- ======================== TAB 5: BOOT SEQUENCE ======================== -->
+<div class="panel" id="panel-boot">
+  <div class="section-header">Boot Sequence — 11 Steps</div>
+
+  <div class="card" style="background:var(--surface);border:1px solid var(--border-light);padding:20px;margin-bottom:20px;">
+    <p style="color:var(--subtext);margin:0;">The boot sequence is deterministic and linear. Each step must complete successfully before the next begins. Any error halts the boot and reports the failure.</p>
+  </div>
+
+  <div class="card">
+    <div class="boot-step">
+      <div class="boot-num">1</div>
+      <div class="boot-body">
+        <h4>CLI parses command</h4>
+        <p>User runs <code>torque start</code> or <code>node app.js</code>. CLI resolves <code>--mount-plan</code> path and any override arguments (<code>--port</code>, <code>--debug</code>, etc.).</p>
+      </div>
+    </div>
+
+    <div class="boot-step">
+      <div class="boot-num">2</div>
+      <div class="boot-body">
+        <h4>Load mount plan YAML</h4>
+        <p>Resolver reads the mount plan file and interpolates ENV variables. Validates top-level YAML structure and <code>bundles</code> array.</p>
+      </div>
+    </div>
+
+    <div class="boot-step">
+      <div class="boot-num">3</div>
+      <div class="boot-body">
+        <h4>Resolve bundle sources</h4>
+        <p>For each bundle in the plan, Resolver determines its filesystem path: bare name (from <code>bundles/</code> or <code>.bundles/</code>), local path (via <code>path:../</code>), or git URL (cloned to <code>.bundles/</code> and locked in <code>bundle.lock</code>).</p>
+      </div>
+    </div>
+
+    <div class="boot-step">
+      <div class="boot-num">4</div>
+      <div class="boot-body">
+        <h4>Topological sort by depends_on</h4>
+        <p>Resolver builds the <code>depends_on</code> graph from all manifest files and performs a topological sort. If a cycle is detected, throws <code>CircularDependencyError</code> and halts.</p>
+      </div>
+    </div>
+
+    <div class="boot-step">
+      <div class="boot-num">5</div>
+      <div class="boot-body">
+        <h4>Initialize shared services</h4>
+        <p>Boot up DataLayer (SQLite), EventBus (in-memory ring buffer), and Server (Express). These are singletons — one per app.</p>
+      </div>
+    </div>
+
+    <div class="boot-step">
+      <div class="boot-num">6</div>
+      <div class="boot-body">
+        <h4>Validate all manifests</h4>
+        <p>Registry reads every manifest.yml and validates structure: required keys, schema types, no duplicate event names, no missing interface handlers. Validates <code>depends_on</code> references against active bundles. If <code>validation.contracts: strict</code>, enforces manifest↔implementation match.</p>
+      </div>
+    </div>
+
+    <div class="boot-step">
+      <div class="boot-num">7</div>
+      <div class="boot-body">
+        <h4>Provision schemas (DataLayer)</h4>
+        <p>For each bundle, DataLayer creates all SQLite tables declared in the manifest. Table names are prefixed <code>{bundleName}_{tableName}</code>. If WAL mode is not enabled, enable it now. Create <code>_kernel_events</code> table for event log.</p>
+      </div>
+    </div>
+
+    <div class="boot-step">
+      <div class="boot-num">8</div>
+      <div class="boot-body">
+        <h4>Instantiate bundle classes with DI</h4>
+        <p>For each bundle (in topological order), import its logic.js file, call the default export with <code>{ data, events, config, coordinator }</code> (scoped to that bundle), and instantiate the bundle class.</p>
+      </div>
+    </div>
+
+    <div class="boot-step">
+      <div class="boot-num">9</div>
+      <div class="boot-body">
+        <h4>Wire interfaces & subscriptions</h4>
+        <p>Registry builds the interface map from all bundles. For each declared event subscription in logic.js, wire the handler to EventBus. Fire <code>bundle:after-boot</code> hook.</p>
+      </div>
+    </div>
+
+    <div class="boot-step">
+      <div class="boot-num">10</div>
+      <div class="boot-body">
+        <h4>Discover and register intents</h4>
+        <p>Registry calls <code>instance.intents()</code> on each booted bundle and stores the returned Intent objects as runtime metadata. The AgentRouter auto-registers <code>POST /api/intents/{bundle}/{intent}</code> for each discovered intent. HookBus emits <code>intent_received</code>, <code>executing</code>, and <code>intent_invoked</code> lifecycle events on every invocation.</p>
+      </div>
+    </div>
+
+    <div class="boot-step">
+      <div class="boot-num">11</div>
+      <div class="boot-body">
+        <h4>Register HTTP routes & start server</h4>
+        <p>Server registers all routes from all bundle manifests to the Express app. Start listening on <code>--port</code> (default 3000). Log "Server listening on port 3000".</p>
+      </div>
+    </div>
+  </div>
+</div><!-- /panel-boot -->
+
+<!-- ======================== TAB 6: INTENT LAYER ======================== -->
+<div class="panel" id="panel-intents">
+  <div class="section-header">Intent-Driven Architecture — <code style="color:var(--pink);font-size:11px;">the semantic action layer</code></div>
+  <div class="card" style="margin-bottom:16px">
+    <p style="color:var(--text);">An Intent is the atomic unit of meaning in Torque. Where interfaces are mechanical contracts between bundles, intents are semantic actions that carry purpose. Every intent is discoverable at boot, auto-routed by the kernel, and observable through lifecycle hooks. Intents manifest in three ways: as REST endpoints, as Agent Tool Schemas, and as Reactive Stream triggers.</p>
+  </div>
+
+  <div class="card-grid">
+    <!-- Discovery -->
+    <div class="card">
+      <h3>Discovery at Boot <span class="badge" style="background:rgba(232,121,168,0.15);color:var(--pink);">intent</span></h3>
+      <p>During boot (step 10), the Registry calls <code>instance.intents()</code> on every booted bundle. Each bundle returns an array of Intent objects declaring name, input schema, handler function, and human-readable description. The Registry stores these as runtime metadata alongside the interface map.</p>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--pink);margin-bottom:6px;font-weight:500;">Intent declaration in logic.js:</div>
+        <pre style="margin:4px 0;padding:8px;font-size:10px;line-height:1.5;background:var(--overlay);"><span class="t-kw">export default async function</span> <span class="t-cls">TasksBundle</span>({ data, events }) {
+  <span class="t-kw">return</span> {
+    <span class="t-comment">// ... interfaces ...</span>
+    <span class="t-key">intents</span>: () => [
+      {
+        <span class="t-key">name</span>: <span class="t-str">'createTask'</span>,
+        <span class="t-key">description</span>: <span class="t-str">'Create a new task in a project'</span>,
+        <span class="t-key">input</span>: { <span class="t-key">title</span>: <span class="t-str">'string'</span>, <span class="t-key">projectId</span>: <span class="t-str">'number'</span> },
+        <span class="t-key">handler</span>: <span class="t-kw">async</span> (args) => { <span class="t-comment">/* ... */</span> }
+      }
+    ]
+  };
+}</pre>
+      </div>
+    </div>
+
+    <!-- AgentRouter -->
+    <div class="card">
+      <h3>AgentRouter <span class="badge" style="background:rgba(232,121,168,0.15);color:var(--pink);">intent</span></h3>
+      <p>The AgentRouter is the kernel component that dispatches intent invocations. At boot, it reads all registered intents and auto-registers a <code>POST /api/intents/{bundle}/{intent}</code> route for each one. No manifest route declarations needed — intent routes are derived automatically.</p>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--pink);margin-bottom:6px;font-weight:500;">Auto-registered route:</div>
+        <code>POST /api/intents/tasks/createTask</code><br>
+        <span style="color:var(--muted);">Request body is validated against the intent's input schema.</span>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--pink);margin-bottom:6px;font-weight:500;">Dispatch flow:</div>
+        1. Receive POST request at <code>/api/intents/{bundle}/{intent}</code><br>
+        2. Validate input against declared schema<br>
+        3. HookBus emits <code>intent_received</code><br>
+        4. HookBus emits <code>executing</code><br>
+        5. Call intent handler with validated args<br>
+        6. HookBus emits <code>intent_invoked</code> with result<br>
+        7. Return result as JSON response
+      </div>
+    </div>
+
+    <!-- HookBus Lifecycle -->
+    <div class="card">
+      <h3>HookBus Lifecycle Events <span class="badge" style="background:rgba(232,121,168,0.15);color:var(--pink);">intent</span></h3>
+      <p>Every intent invocation emits three lifecycle events through the HookBus. Gates can intercept <code>intent_received</code> to abort execution (e.g., authorization checks). Observers on <code>intent_invoked</code> enable audit logging, metrics, and reactive side effects.</p>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--pink);margin-bottom:6px;font-weight:500;">Lifecycle events:</div>
+        <table style="margin-top:6px;width:100%;font-size:10px;">
+          <tr style="border-bottom:1px solid var(--border-light);">
+            <td style="color:var(--pink);padding:2px 0;">intent_received</td>
+            <td style="color:var(--subtext);">Fired before dispatch — gates can abort by throwing</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-light);">
+            <td style="color:var(--pink);padding:2px 0;">executing</td>
+            <td style="color:var(--subtext);">Fired when the handler begins execution</td>
+          </tr>
+          <tr>
+            <td style="color:var(--pink);padding:2px 0;">intent_invoked</td>
+            <td style="color:var(--subtext);">Fired after handler completes — carries result payload</td>
+          </tr>
+        </table>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--pink);margin-bottom:6px;font-weight:500;">Hook context payload:</div>
+        <code>{ bundle, intent, args, result?, error?, timestamp }</code>
+      </div>
+    </div>
+
+    <!-- Three Manifestations -->
+    <div class="card">
+      <h3>Three Manifestations <span class="badge" style="background:rgba(232,121,168,0.15);color:var(--pink);">intent</span></h3>
+      <p>Every declared intent automatically surfaces through three channels. No additional configuration or wiring is required — the kernel derives all three from the single intent declaration in <code>intents()</code>.</p>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--pink);margin-bottom:6px;font-weight:500;">1. REST Endpoint</div>
+        <code>POST /api/intents/{bundle}/{intent}</code> — standard HTTP, JSON in/out, schema-validated. Human clients and external services consume intents here.
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--pink);margin-bottom:6px;font-weight:500;">2. Agent Tool Schema</div>
+        Each intent is exported as a tool schema at <code>GET /api/intents/_tools</code>. AI agents (Claude, GPT, local LLMs) consume this schema to discover and invoke intents programmatically. The schema includes name, description, and typed input parameters.
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--subtext);">
+        <div style="color:var(--pink);margin-bottom:6px;font-weight:500;">3. Reactive Streams</div>
+        The HookBus lifecycle events (<code>intent_received</code>, <code>executing</code>, <code>intent_invoked</code>) allow any bundle to reactively subscribe to intent activity. This enables event-driven workflows, audit trails, and cross-bundle orchestration without direct coupling.
+      </div>
+    </div>
+  </div><!-- /card-grid -->
+</div><!-- /panel-intents -->
+
+<!-- ======================== TAB 7: FRAMEWORK COMPARISON ======================== -->
+<div class="panel" id="panel-comparison">
+  <div class="comparison-intro">
+    <p><strong>How does Torque compare to other frameworks and architectural patterns?</strong> The comparison below spans 11 dimensions: composition model, feature organization, data, cross-module communication, events, isolation, configuration, AI support, developer experience, the "add a feature" test, and intent-driven architecture.</p>
+    <p>In each row, <strong style="color:var(--primary);">Torque is highlighted.</strong> Torque's pattern is unique: it uses YAML-declared composition at runtime, enforces module isolation at the kernel level, and validates all cross-module calls at boot.</p>
+  </div>
+
+  <!-- Comparison 1: Architecture / Composition Model -->
+  <div class="comparison-table">
+    <h4>1. Architecture / Composition Model</h4>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Rails</th><th>ASP.NET Core</th><th>MEAN</th><th>Amplifier</th><th>Linux</th><th>Torque</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Monolith — app, controllers, models, views in one Rails.root directory</td>
+            <td>Project file + .csproj — compile-time dependency resolution</td>
+            <td>Modules via npm — transitive deps, package.json tree</td>
+            <td>Compose agents, add to team, code runs in each cell</td>
+            <td>Modular monolith — linked object files, ELF sections, kernel syscalls</td>
+            <td class="torque-highlight">YAML-declared composition — bundle list, each bundle resolved at runtime, kernel injects isolation</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Comparison 2: Module / Feature Organization -->
+  <div class="comparison-table">
+    <h4>2. Module / Feature Organization</h4>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Rails</th><th>ASP.NET Core</th><th>MEAN</th><th>Amplifier</th><th>Linux</th><th>Torque</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>app/models, app/controllers, app/views — directory convention</td>
+            <td>Projects — folder structure, namespaces, project references</td>
+            <td>node_modules — npm packages with transitive dependencies</td>
+            <td>Each agent is a container with its own codebase</td>
+            <td>fs/ directory (filesystem), net/ (networking) — each subsystem isolated by .c/.h files</td>
+            <td class="torque-highlight">manifest.yml + logic.js — self-contained, no implicit imports, full contract visible</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Comparison 3: Database / State -->
+  <div class="comparison-table">
+    <h4>3. Database / State</h4>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Rails</th><th>ASP.NET Core</th><th>MEAN</th><th>Amplifier</th><th>Linux</th><th>Torque</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>ActiveRecord — models map to tables, implicit via class name</td>
+            <td>Entity Framework — DbSet&lt;T&gt; per context, compile-time schema</td>
+            <td>Mongoose, Sequelize — implicit schemas, ODM/ORM transitive</td>
+            <td>Each cell manages its own state; syncs via API</td>
+            <td>Virtual memory — pages, TLB, kernel manages address space isolation</td>
+            <td class="torque-highlight">SQLite, {bundle}_{table} prefix — schema in manifest, enforced at query time, per-bundle isolation</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Comparison 4: Cross-Module Communication -->
+  <div class="comparison-table">
+    <h4>4. Cross-Module Communication</h4>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Rails</th><th>ASP.NET Core</th><th>MEAN</th><th>Amplifier</th><th>Linux</th><th>Torque</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Direct service calls within process — no isolation boundary</td>
+            <td>Direct references — compile-time type safety, no runtime cost</td>
+            <td>require() and npm deps — implicit, transitive, deeply nested</td>
+            <td>HTTP API calls between cells — no in-process coupling</td>
+            <td>Syscalls — formal boundary, explicit context switch, kernel mediates</td>
+            <td class="torque-highlight">coordinator.call(bundleName, interface, args) — declared in manifest, validated at boot, runtime cost is low</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Comparison 5: Event System -->
+  <div class="comparison-table">
+    <h4>5. Event System</h4>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Rails</th><th>ASP.NET Core</th><th>MEAN</th><th>Amplifier</th><th>Linux</th><th>Torque</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>ActiveSupport::Notifications, custom observers — implicit, in-process</td>
+            <td>IEventBus, MediatR — in-process, optional pub/sub</td>
+            <td>EventEmitter, external queue (RabbitMQ, Redis) — optional, external</td>
+            <td>Cell subscribes to events, async processing via queue</td>
+            <td>signals (SIGTERM, SIGKILL) — kernel delivers async notifications</td>
+            <td class="torque-highlight">EventBus.publish() + subscribe() — durable (SQLite), in-memory ring buffer (200), schema validated, synchronous</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Comparison 6: Isolation / Boundary Enforcement -->
+  <div class="comparison-table">
+    <h4>6. Isolation / Boundary Enforcement</h4>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Rails</th><th>ASP.NET Core</th><th>MEAN</th><th>Amplifier</th><th>Linux</th><th>Torque</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Soft — conventions, code review, no runtime enforcement</td>
+            <td>Hard at compile time — namespaces, access modifiers, type system</td>
+            <td>Soft — module.exports is convention, no real boundary</td>
+            <td>Hard — separate containers, HTTP boundary, no shared memory</td>
+            <td>Hard — MMU, page tables, separate processes cannot access each other's memory</td>
+            <td class="torque-highlight">Hard at runtime — BundleIsolationError on table access, DependencyViolationError on undeclared calls, catch at boot</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Comparison 7: Configuration -->
+  <div class="comparison-table">
+    <h4>7. Configuration</h4>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Rails</th><th>ASP.NET Core</th><th>MEAN</th><th>Amplifier</th><th>Linux</th><th>Torque</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>config/environments, config/database.yml — file-based</td>
+            <td>appsettings.json, environment-specific files</td>
+            <td>package.json, dotenv — npm + env vars</td>
+            <td>Team settings, cell settings — hierarchical, versioned</td>
+            <td>/etc/config files, sysctl — kernel parameters, runtime tuning</td>
+            <td class="torque-highlight">mount_plan.yml — single source of truth, ENV interpolation, per-bundle config schema, validated at boot</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Comparison 8: AI / Agent Support -->
+  <div class="comparison-table">
+    <h4>8. AI / Agent Support</h4>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Rails</th><th>ASP.NET Core</th><th>MEAN</th><th>Amplifier</th><th>Linux</th><th>Torque</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Implicit — Rails magic, global conventions, hard to teach</td>
+            <td>Implicit — .NET runtime magic, reflection, context-dependent</td>
+            <td>Implicit — npm resolution, weak contracts, transitive confusion</td>
+            <td>Explicit — agent code + team manifest + cell instructions — fully legible</td>
+            <td>Implicit — kernel internals, syscall tables, hard to teach</td>
+            <td class="torque-highlight">Explicit — manifest.yml declares everything, agent.md guides AI, contracts are legible, no hidden magic</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Comparison 9: CLI / Developer Experience -->
+  <div class="comparison-table">
+    <h4>9. CLI / Developer Experience</h4>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Rails</th><th>ASP.NET Core</th><th>MEAN</th><th>Amplifier</th><th>Linux</th><th>Torque</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>rails new</code>, <code>rails generate</code>, <code>rails server</code> — powerful generators</td>
+            <td><code>dotnet new</code>, <code>dotnet add package</code> — CLI tooling excellent</td>
+            <td><code>npm install</code>, <code>npm start</code> — minimal, standard npm</td>
+            <td><code>amplifier add agent</code>, <code>amplifier build</code> — no-code composition</td>
+            <td><code>make</code>, <code>gcc</code>, <code>ld</code> — low-level, manual control</td>
+            <td class="torque-highlight"><code>torque init</code>, <code>torque add bundle</code>, <code>torque start</code> — simple, explicit, YAML-first</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Comparison 10: The "Add a Feature" Test -->
+  <div class="comparison-table">
+    <h4>10. The "Add a Feature" Test</h4>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Rails</th><th>ASP.NET Core</th><th>MEAN</th><th>Amplifier</th><th>Linux</th><th>Torque</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Create model, migration, controller, views — often touches 5+ files, risk of breaking other routes</td>
+            <td>Add DbSet, migrations, Service, DI registration — tight coupling risk if not careful</td>
+            <td>Add module, export interface, npm install transitive deps — transitive dep explosion, tree shaking unclear</td>
+            <td>Add new cell, declare inputs/outputs, auto-wired by platform — zero diff to existing cells</td>
+            <td>Add driver file (.c/.h), compile, link into vmlinux — careful symbol collision, linker scripts complex</td>
+            <td class="torque-highlight">Add one line to mount_plan.yml — bundle appears, tables created, routes registered, zero git diff in other bundles, no fear of impact</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Comparison 11: Intent-Driven Architecture -->
+  <div class="comparison-table">
+    <h4>11. Intent-Driven Architecture</h4>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Rails</th><th>ASP.NET Core</th><th>MEAN</th><th>Amplifier</th><th>Linux</th><th>Torque</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>None — actions are controller methods, no semantic intent layer</td>
+            <td>MediatR commands/queries — optional, not framework-native</td>
+            <td>None — routes map directly to handlers, no intent abstraction</td>
+            <td>Agent instructions — natural language, no formal schema</td>
+            <td>ioctl commands — numbered, untyped, no discoverability</td>
+            <td class="torque-highlight">Native intent layer — bundles declare intents with typed schemas, auto-registered as REST + Agent Tool Schema + Reactive Streams, HookBus lifecycle on every invocation</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Key Insight -->
+  <div class="key-insight">
+    <h4>Key Insight: The Architectural Pattern Progression</h4>
+    <p><strong>Convention</strong> (Rails) made web apps fast to build, but relies on developer discipline. <strong>Compile-time</strong> (ASP.NET) enforced rules at build time, but creates friction. <strong>Runtime</strong> (Torque) validates composition, dependencies, and isolation at boot and at every call — catching errors early, not after deployment.</p>
+    <p style="margin-top:10px;">Torque is neither a convention-based framework nor a compile-time system. It's an <strong>intent-driven, declarative, runtime-validated composition engine</strong> that treats the application as a wired graph of isolated modules. The YAML file IS the app. Bundles are the units. Intents are the semantic actions. The kernel mediates all communication. This is the language-agnostic, agentic-first composable monolith framework.</p>
+  </div>
+</div><!-- /panel-comparison -->
+
+</div><!-- /content -->
+
+<script>
+  // Tab switching
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const panelId = tab.dataset.panel;
+
+      // Hide all panels
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+
+      // Show selected panel
+      document.getElementById(`panel-${panelId}`).classList.add('active');
+      tab.classList.add('active');
+    });
+  });
+
+  // Tooltip system
+  const tooltip = document.createElement('div');
+  tooltip.className = 'tooltip';
+  document.body.appendChild(tooltip);
+
+  document.addEventListener('mouseover', (e) => {
+    const target = e.target.closest('[data-tip]');
+    if (!target) return;
+
+    const [title, desc, detail] = target.dataset.tip.split('|');
+    tooltip.innerHTML = `
+      <div class="tt-title">${title}</div>
+      <div class="tt-desc">${desc}</div>
+      <div class="tt-detail">${detail}</div>
+    `;
+    tooltip.style.display = 'block';
+
+    const rect = target.getBoundingClientRect();
+    tooltip.style.left = (rect.right + 12) + 'px';
+    tooltip.style.top = (rect.top - tooltip.offsetHeight / 2 + rect.height / 2) + 'px';
+  });
+
+  document.addEventListener('mouseout', (e) => {
+    if (e.target.closest('[data-tip]')) {
+      tooltip.style.display = 'none';
+    }
+  });
+
+  // Smooth tooltip following
+  document.addEventListener('mousemove', (e) => {
+    if (tooltip.style.display === 'block') {
+      const rect = e.target.closest('[data-tip]')?.getBoundingClientRect();
+      if (rect) {
+        tooltip.style.left = (rect.right + 12) + 'px';
+        tooltip.style.top = (rect.top - tooltip.offsetHeight / 2 + rect.height / 2) + 'px';
+      }
+    }
+  });
+
+  // Mobile nav
+  window.toggleMobileNav = function() {
+    const nav = document.getElementById('mobile-nav');
+    nav.classList.toggle('open');
+  }
+
+  window.closeMobileNav = function() {
+    const nav = document.getElementById('mobile-nav');
+    nav.classList.remove('open');
+  }
+</script>
+
+</body>
+</html>
